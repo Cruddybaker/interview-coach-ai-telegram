@@ -1809,5 +1809,766 @@
       "учитывает маршруты, fleet, топливо, персонал и pricing",
       "предлагает KPI и governance плана на 90 дней"
     ]
+  },
+  {
+    "id": "sql_retention_cohort_001",
+    "company": "Data/SQL",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "sql",
+      "analytics",
+      "product",
+      "cohort_analysis",
+      "retention"
+    ],
+    "difficulty": "middle",
+    "type": "sql_task",
+    "prompt": "Даны таблицы users(user_id, signup_date) и events(user_id, event_date, event_name). Посчитайте D7 retention по недельным когортам регистрации.",
+    "signals": [
+      "SQL",
+      "cohort analysis",
+      "retention",
+      "date functions"
+    ],
+    "rubric": [
+      "строит когорты по signup_date",
+      "находит активность на 7-й день или в окне D7",
+      "считает retention как долю активных пользователей",
+      "аккуратно работает с датами и дублями событий"
+    ]
+  },
+  {
+    "id": "sql_top_n_category_001",
+    "company": "Data/SQL",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "sql",
+      "analytics",
+      "database",
+      "marketplace"
+    ],
+    "difficulty": "junior-middle",
+    "type": "sql_task",
+    "prompt": "Дана таблица orders(order_id, seller_id, category, revenue, created_at). Найдите топ-3 продавца по выручке в каждой категории за последний месяц.",
+    "signals": [
+      "SQL",
+      "window functions",
+      "ranking",
+      "aggregation"
+    ],
+    "rubric": [
+      "агрегирует выручку по продавцу и категории",
+      "использует rank/dense_rank/row_number",
+      "фильтрует период корректно",
+      "объясняет, как обработать равенства в рейтинге"
+    ]
+  },
+  {
+    "id": "sql_deduplicate_events_001",
+    "company": "Data/SQL",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "sql",
+      "analytics",
+      "database",
+      "data_quality"
+    ],
+    "difficulty": "middle",
+    "type": "sql_task",
+    "prompt": "В таблице events появились дубликаты: одинаковые user_id, event_name и event_time, но разные ingest_time. Как оставить одну версию события и проверить масштаб проблемы?",
+    "signals": [
+      "SQL",
+      "deduplication",
+      "data quality",
+      "window functions"
+    ],
+    "rubric": [
+      "определяет ключ дубликата",
+      "использует row_number по ingest_time",
+      "считает долю дублей и затронутые события",
+      "объясняет риск влияния на метрики"
+    ]
+  },
+  {
+    "id": "sql_experiment_metrics_001",
+    "company": "Data/SQL",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "sql",
+      "analytics",
+      "statistics",
+      "experimentation",
+      "product"
+    ],
+    "difficulty": "middle",
+    "type": "sql_task",
+    "prompt": "Есть experiment_assignments(user_id, variant) и purchases(user_id, amount, created_at). Как посчитать conversion rate, ARPU и проверить, что пользователь не попал в две группы?",
+    "signals": [
+      "SQL",
+      "A/B test",
+      "metrics",
+      "data validation"
+    ],
+    "rubric": [
+      "считает пользователей по группам",
+      "считает CR и ARPU на уровне пользователя",
+      "проверяет пересечения групп",
+      "называет ограничения без статистического теста"
+    ]
+  },
+  {
+    "id": "product_sense_notifications_001",
+    "company": "Product Management",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "product",
+      "product_sense",
+      "analytics",
+      "communication"
+    ],
+    "difficulty": "middle",
+    "type": "product_sense_case",
+    "prompt": "У приложения падает вовлеченность. Команда предлагает добавить больше push-уведомлений. Как вы поймете, хорошая ли это идея?",
+    "signals": [
+      "product sense",
+      "user needs",
+      "metrics",
+      "trade-off"
+    ],
+    "rubric": [
+      "уточняет сегмент и проблему пользователя",
+      "разделяет engagement и раздражение от уведомлений",
+      "предлагает метрики открытия, retention, opt-out и uninstall",
+      "описывает безопасный эксперимент"
+    ]
+  },
+  {
+    "id": "product_execution_checkout_001",
+    "company": "Product Management",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "product",
+      "product_execution",
+      "analytics",
+      "marketplace"
+    ],
+    "difficulty": "middle",
+    "type": "product_execution_case",
+    "prompt": "Конверсия checkout упала на 9% после релиза новой формы оплаты. Как будете диагностировать и принимать решение о rollback?",
+    "signals": [
+      "product execution",
+      "funnel",
+      "incident analysis",
+      "rollback"
+    ],
+    "rubric": [
+      "разбивает checkout на шаги",
+      "сегментирует по платформам, методам оплаты и версиям",
+      "проверяет технические ошибки и изменение трафика",
+      "задает критерии rollback и коммуникации"
+    ]
+  },
+  {
+    "id": "product_metrics_creator_001",
+    "company": "Product Management",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "product",
+      "analytics",
+      "north_star",
+      "growth_strategy"
+    ],
+    "difficulty": "junior-middle",
+    "type": "metrics_case",
+    "prompt": "Вы отвечаете за сервис для авторов контента. Какую North Star Metric выберете и какие guardrail-метрики добавите?",
+    "signals": [
+      "north star metric",
+      "guardrails",
+      "creator economy",
+      "product metrics"
+    ],
+    "rubric": [
+      "связывает метрику с ценностью пользователя",
+      "разделяет supply и demand side",
+      "добавляет качество, retention и монетизацию",
+      "объясняет риски оптимизации одной метрики"
+    ]
+  },
+  {
+    "id": "product_prioritization_b2b_001",
+    "company": "Product Management",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "product",
+      "prioritization",
+      "finance",
+      "communication"
+    ],
+    "difficulty": "middle",
+    "type": "prioritization_case",
+    "prompt": "В B2B-продукте одновременно просят SSO, новый дашборд и ускорение API. Как приоритизировать roadmap на квартал?",
+    "signals": [
+      "prioritization",
+      "RICE",
+      "stakeholders",
+      "B2B"
+    ],
+    "rubric": [
+      "уточняет цели квартала и сегменты клиентов",
+      "оценивает impact, effort, risk и revenue",
+      "учитывает enterprise deals и техдолг",
+      "объясняет компромисс стейкхолдерам"
+    ]
+  },
+  {
+    "id": "system_design_rate_limiter_001",
+    "company": "System Design",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "system_design",
+      "backend",
+      "cache",
+      "redis",
+      "api"
+    ],
+    "difficulty": "middle",
+    "type": "system_design_case",
+    "prompt": "Спроектируйте rate limiter для публичного API: 100 запросов в минуту на пользователя, несколько дата-центров, нужны низкая задержка и защита от всплесков.",
+    "signals": [
+      "system design",
+      "rate limiting",
+      "Redis",
+      "distributed systems"
+    ],
+    "rubric": [
+      "уточняет алгоритм fixed/sliding window/token bucket",
+      "описывает хранение счетчиков и TTL",
+      "обсуждает распределенность и consistency",
+      "покрывает отказоустойчивость и мониторинг"
+    ]
+  },
+  {
+    "id": "system_design_notifications_001",
+    "company": "System Design",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "system_design",
+      "backend",
+      "queue",
+      "kafka",
+      "product"
+    ],
+    "difficulty": "middle",
+    "type": "system_design_case",
+    "prompt": "Спроектируйте сервис уведомлений, который отправляет email, push и SMS, поддерживает ретраи, приоритеты и отписки пользователей.",
+    "signals": [
+      "system design",
+      "queues",
+      "retry",
+      "idempotency"
+    ],
+    "rubric": [
+      "разделяет API, очередь, worker и провайдеров",
+      "учитывает idempotency и retry policy",
+      "поддерживает preferences/unsubscribe",
+      "задает метрики доставки и DLQ"
+    ]
+  },
+  {
+    "id": "system_design_search_autocomplete_001",
+    "company": "System Design",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "system_design",
+      "backend",
+      "search",
+      "cache",
+      "performance"
+    ],
+    "difficulty": "middle",
+    "type": "system_design_case",
+    "prompt": "Спроектируйте autocomplete для поиска товаров на маркетплейсе: миллионы запросов, опечатки, персонализация и обновление каталога.",
+    "signals": [
+      "system design",
+      "search",
+      "autocomplete",
+      "latency"
+    ],
+    "rubric": [
+      "обсуждает trie/inverted index/search engine",
+      "учитывает latency и кеширование",
+      "разделяет offline indexing и online serving",
+      "обсуждает персонализацию, опечатки и fallback"
+    ]
+  },
+  {
+    "id": "system_design_file_storage_001",
+    "company": "System Design",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "system_design",
+      "backend",
+      "database",
+      "storage"
+    ],
+    "difficulty": "middle",
+    "type": "system_design_case",
+    "prompt": "Спроектируйте сервис загрузки и хранения файлов резюме: большие PDF, приватность, антивирусная проверка, быстрый доступ к тексту.",
+    "signals": [
+      "system design",
+      "object storage",
+      "metadata",
+      "privacy"
+    ],
+    "rubric": [
+      "разделяет object storage и metadata DB",
+      "описывает async processing и extraction pipeline",
+      "учитывает ACL, encryption и retention",
+      "покрывает ошибки загрузки и лимиты размера"
+    ]
+  },
+  {
+    "id": "ml_leakage_churn_001",
+    "company": "Data Science/ML",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "ml",
+      "data_science",
+      "model_evaluation",
+      "analytics"
+    ],
+    "difficulty": "middle",
+    "type": "ml_case",
+    "prompt": "Модель churn показывает ROC-AUC 0.94 на валидации, но плохо работает в проде. Какие причины проверите в первую очередь?",
+    "signals": [
+      "ML",
+      "data leakage",
+      "validation",
+      "production drift"
+    ],
+    "rubric": [
+      "проверяет leakage и временной split",
+      "сравнивает train/serving feature distribution",
+      "оценивает drift и label delay",
+      "предлагает мониторинг и backtesting"
+    ]
+  },
+  {
+    "id": "ml_imbalanced_fraud_001",
+    "company": "Data Science/ML",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "ml",
+      "data_science",
+      "statistics",
+      "finance",
+      "model_evaluation"
+    ],
+    "difficulty": "middle",
+    "type": "ml_case",
+    "prompt": "Нужно построить модель fraud detection, где мошеннических операций меньше 1%. Какие метрики и подход к обучению выберете?",
+    "signals": [
+      "class imbalance",
+      "precision/recall",
+      "fraud",
+      "threshold"
+    ],
+    "rubric": [
+      "не ограничивается accuracy",
+      "выбирает precision/recall, PR-AUC, cost-based metric",
+      "обсуждает threshold и ручную проверку",
+      "учитывает sampling, class weights и leakage"
+    ]
+  },
+  {
+    "id": "ml_recsys_cold_start_001",
+    "company": "Data Science/ML",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "ml",
+      "data_science",
+      "recommender_systems",
+      "marketplace",
+      "product"
+    ],
+    "difficulty": "middle",
+    "type": "ml_product_case",
+    "prompt": "В рекомендательной системе маркетплейса плохо продаются новые товары без истории. Как решить cold start и как измерить результат?",
+    "signals": [
+      "recommender systems",
+      "cold start",
+      "offline/online metrics",
+      "marketplace"
+    ],
+    "rubric": [
+      "разделяет cold start для товара и пользователя",
+      "предлагает content-based features и exploration",
+      "выбирает offline и online метрики",
+      "учитывает fairness к продавцам и бизнес-эффект"
+    ]
+  },
+  {
+    "id": "mlops_model_monitoring_001",
+    "company": "Data Science/ML",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "ml",
+      "mlops",
+      "model_monitoring",
+      "system_design"
+    ],
+    "difficulty": "middle",
+    "type": "mlops_case",
+    "prompt": "ML-модель скоринга работает через API. Какие мониторинги и алерты нужны, чтобы безопасно поддерживать ее в проде?",
+    "signals": [
+      "MLOps",
+      "monitoring",
+      "drift",
+      "SLA"
+    ],
+    "rubric": [
+      "мониторит latency, errors и throughput",
+      "следит за feature drift и prediction drift",
+      "учитывает delayed labels и качество модели",
+      "описывает fallback, rollback и ownership"
+    ]
+  },
+  {
+    "id": "backend_idempotency_payments_001",
+    "company": "Backend",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "backend",
+      "system_design",
+      "database",
+      "idempotency",
+      "payments"
+    ],
+    "difficulty": "middle",
+    "type": "backend_case",
+    "prompt": "Пользователь нажал оплатить два раза, а сеть оборвалась. Как спроектировать API оплаты, чтобы не списать деньги дважды?",
+    "signals": [
+      "idempotency",
+      "payments",
+      "transactions",
+      "API design"
+    ],
+    "rubric": [
+      "использует idempotency key",
+      "описывает состояния платежа и транзакции",
+      "учитывает retry и timeout",
+      "разбирает race conditions и observability"
+    ]
+  },
+  {
+    "id": "backend_pagination_feed_001",
+    "company": "Backend",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "backend",
+      "database",
+      "api",
+      "performance"
+    ],
+    "difficulty": "junior-middle",
+    "type": "backend_case",
+    "prompt": "В API ленты товаров нужно сделать пагинацию. Чем offset pagination отличается от cursor pagination и что выберете при большом трафике?",
+    "signals": [
+      "pagination",
+      "API",
+      "database indexes",
+      "performance"
+    ],
+    "rubric": [
+      "объясняет проблемы offset на больших данных",
+      "проектирует cursor по стабильному ключу",
+      "учитывает сортировку и новые записи",
+      "обсуждает индексы и backward pagination"
+    ]
+  },
+  {
+    "id": "frontend_state_form_001",
+    "company": "Frontend",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "frontend",
+      "javascript",
+      "typescript",
+      "testing",
+      "product"
+    ],
+    "difficulty": "junior-middle",
+    "type": "frontend_case",
+    "prompt": "Есть сложная форма заявки с автосохранением, валидацией и несколькими шагами. Как организовать состояние и тестирование?",
+    "signals": [
+      "frontend",
+      "state management",
+      "forms",
+      "testing"
+    ],
+    "rubric": [
+      "разделяет local/server state",
+      "описывает валидацию и dirty state",
+      "учитывает autosave, debounce и ошибки сети",
+      "предлагает unit/integration/e2e тесты"
+    ]
+  },
+  {
+    "id": "frontend_performance_table_001",
+    "company": "Frontend",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "frontend",
+      "performance",
+      "javascript",
+      "analytics"
+    ],
+    "difficulty": "middle",
+    "type": "frontend_case",
+    "prompt": "Дашборд с таблицей на 50 тысяч строк тормозит в браузере. Как диагностировать и ускорить интерфейс?",
+    "signals": [
+      "frontend performance",
+      "virtualization",
+      "profiling",
+      "UX"
+    ],
+    "rubric": [
+      "использует profiler/performance tools",
+      "предлагает virtualization/pagination",
+      "оптимизирует rendering и memoization",
+      "учитывает UX загрузки и серверную агрегацию"
+    ]
+  },
+  {
+    "id": "behavioral_conflict_stakeholder_001",
+    "company": "Behavioral",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "behavioral",
+      "communication",
+      "product",
+      "stakeholders"
+    ],
+    "difficulty": "junior-middle",
+    "type": "behavioral",
+    "prompt": "Расскажите о конфликте со стейкхолдером: в чем было расхождение, что вы сделали и чем закончилась ситуация?",
+    "signals": [
+      "STAR",
+      "stakeholder management",
+      "conflict",
+      "communication"
+    ],
+    "rubric": [
+      "структурирует ответ по STAR",
+      "показывает свою роль и действия",
+      "не обвиняет другую сторону",
+      "дает измеримый или понятный результат"
+    ]
+  },
+  {
+    "id": "behavioral_failure_learning_001",
+    "company": "Behavioral",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "behavioral",
+      "communication",
+      "learning"
+    ],
+    "difficulty": "junior-middle",
+    "type": "behavioral",
+    "prompt": "Расскажите о профессиональной ошибке. Как вы ее обнаружили, исправили и что изменили в процессе после этого?",
+    "signals": [
+      "STAR",
+      "ownership",
+      "learning",
+      "reflection"
+    ],
+    "rubric": [
+      "выбирает реальную ошибку без катастрофизации",
+      "берет ответственность",
+      "объясняет исправление и коммуникацию",
+      "показывает изменение процесса или привычки"
+    ]
+  },
+  {
+    "id": "behavioral_ambiguity_001",
+    "company": "Behavioral",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "behavioral",
+      "communication",
+      "product",
+      "analytics"
+    ],
+    "difficulty": "middle",
+    "type": "behavioral",
+    "prompt": "Опишите ситуацию, где задача была неопределенной, а сроки ограничены. Как вы сузили проблему и приняли решение?",
+    "signals": [
+      "ambiguity",
+      "prioritization",
+      "decision making",
+      "STAR"
+    ],
+    "rubric": [
+      "показывает, какие вопросы уточнил",
+      "делает разумные допущения",
+      "приоритизирует и фиксирует риски",
+      "показывает результат и чему научился"
+    ]
+  },
+  {
+    "id": "behavioral_leadership_without_authority_001",
+    "company": "Behavioral",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "behavioral",
+      "communication",
+      "leadership",
+      "stakeholders"
+    ],
+    "difficulty": "middle",
+    "type": "behavioral",
+    "prompt": "Расскажите о случае, когда вам нужно было повлиять на людей, которые вам не подчинялись.",
+    "signals": [
+      "leadership",
+      "influence",
+      "stakeholders",
+      "STAR"
+    ],
+    "rubric": [
+      "объясняет контекст и цель",
+      "показывает, как понял мотивацию людей",
+      "использует данные, доверие или переговоры",
+      "завершает конкретным результатом"
+    ]
+  },
+  {
+    "id": "data_quality_dashboard_001",
+    "company": "Data/Analytics",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "analytics",
+      "data_quality",
+      "sql",
+      "communication"
+    ],
+    "difficulty": "junior-middle",
+    "type": "analytics_case",
+    "prompt": "В дашборде резко выросла ключевая метрика. Как понять, это реальный рост или проблема в данных?",
+    "signals": [
+      "data quality",
+      "dashboard",
+      "metric validation",
+      "communication"
+    ],
+    "rubric": [
+      "проверяет источник, ETL и свежесть данных",
+      "сравнивает с контрольными метриками",
+      "сегментирует рост по каналам/платформам/времени",
+      "коммуницирует неопределенность стейкхолдерам"
+    ]
+  },
+  {
+    "id": "analytics_metric_definition_001",
+    "company": "Data/Analytics",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "analytics",
+      "product",
+      "metrics",
+      "communication"
+    ],
+    "difficulty": "junior-middle",
+    "type": "analytics_case",
+    "prompt": "Две команды по-разному считают активного пользователя. Как договориться о едином определении метрики?",
+    "signals": [
+      "metric definition",
+      "stakeholders",
+      "governance",
+      "analytics"
+    ],
+    "rubric": [
+      "выясняет бизнес-цель метрики",
+      "разбирает разные определения и последствия",
+      "предлагает canonical definition и owner",
+      "фиксирует документацию и проверку качества"
+    ]
+  },
+  {
+    "id": "coding_intervals_merge_001",
+    "company": "Coding",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "algorithms",
+      "coding",
+      "backend"
+    ],
+    "difficulty": "junior-middle",
+    "type": "coding_task",
+    "prompt": "Дан список интервалов встреч. Объедините пересекающиеся интервалы и верните минимальный набор занятых слотов.",
+    "signals": [
+      "arrays",
+      "sorting",
+      "intervals",
+      "complexity"
+    ],
+    "rubric": [
+      "сортирует интервалы по началу",
+      "корректно объединяет пересечения",
+      "обрабатывает пустой список и границы",
+      "оценивает сложность O(n log n)"
+    ]
+  },
+  {
+    "id": "coding_frequency_topk_001",
+    "company": "Coding",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "algorithms",
+      "coding",
+      "backend",
+      "optimization"
+    ],
+    "difficulty": "middle",
+    "type": "coding_task",
+    "prompt": "Дан массив строк. Верните k самых частых строк, при равной частоте - в лексикографическом порядке.",
+    "signals": [
+      "hash map",
+      "heap/sorting",
+      "tie-break",
+      "complexity"
+    ],
+    "rubric": [
+      "считает частоты через hash map",
+      "корректно обрабатывает tie-break",
+      "выбирает сортировку или heap и объясняет сложность",
+      "покрывает k больше числа уникальных строк"
+    ]
+  },
+  {
+    "id": "database_index_slow_query_001",
+    "company": "Database",
+    "source": "original Russian interview bank; theme-derived from common public interview categories",
+    "tags": [
+      "database",
+      "sql",
+      "backend",
+      "performance"
+    ],
+    "difficulty": "middle",
+    "type": "database_case",
+    "prompt": "Запрос по таблице заказов стал выполняться 12 секунд после роста данных. Как понять, какой индекс нужен, и какие риски у добавления индекса?",
+    "signals": [
+      "indexes",
+      "EXPLAIN",
+      "query optimization",
+      "trade-off"
+    ],
+    "rubric": [
+      "смотрит план запроса и селективность",
+      "учитывает WHERE/JOIN/ORDER BY",
+      "обсуждает composite/covering indexes",
+      "называет риски записи, размера и lock при создании"
+    ]
   }
 ]

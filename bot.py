@@ -15,7 +15,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
-BOT_VERSION = "gate3-dz4-v1.5"
+BOT_VERSION = "gate3-dz4-v1.6"
 TRIAL_QUESTION_LIMIT = 5
 TRIAL_VACANCY_LIMIT = 3
 TRIAL_POSITION_LIMIT = 1
@@ -56,8 +56,8 @@ SKILL_ALIASES = {
     "analytics": ["аналитика", "analyst", "dashboards", "metabase", "tableau", "power bi", "looker"],
     "communication": ["презентация", "stakeholders", "коммуникация", "переговоры", "storytelling"],
     "finance": ["финансы", "unit economics", "p&l", "бюджет", "forecast", "экономика"],
-    "ml": ["machine learning", "ml", "llm", "rag", "prompt", "model", "модель", "ai", "ии"],
-    "product": ["product", "roadmap", "jtbd", "hypothesis", "custdev", "метрики", "продукт"],
+    "ml": ["machine learning", "ml", "llm", "rag", "prompt", "model", "модель", "ai", "ии", "data science", "datascience", "recsys", "fraud"],
+    "product": ["product", "roadmap", "jtbd", "hypothesis", "custdev", "метрики", "продукт", "product sense", "product execution"],
     "english": ["english", "английский", "b2", "c1"],
     "backend": ["backend", "бэкенд", "go", "golang", "php", "java", "микросервис", "rpc", "http", "api"],
     "frontend": ["frontend", "фронтенд", "javascript", "typescript", "react", "html", "css", "браузер"],
@@ -69,6 +69,7 @@ SKILL_ALIASES = {
     "banking": ["банк", "сбер", "тинькофф", "т-банк", "кредит", "бирж", "инвестиц"],
     "marketplace": ["ozon", "озон", "авито", "маркетплейс"],
     "consulting": ["consulting", "consultant", "case interview", "консалтинг", "консультант", "бизнес кейс", "бизнес-кейс", "стратегический кейс"],
+    "behavioral": ["behavioral", "star", "поведенческое", "поведенческие", "leadership", "лидерство", "конфликт", "stakeholder"],
 }
 
 SKILL_LABELS = {
@@ -90,6 +91,7 @@ SKILL_LABELS = {
     "banking": "банковский домен",
     "marketplace": "маркетплейс",
     "consulting": "case interview / consulting",
+    "behavioral": "поведенческие вопросы",
 }
 
 SAMPLE_RESUME = (
@@ -370,8 +372,13 @@ def infer_tags(resume, job):
     keyword_tags = {
         "rag": ["rag", "retrieval", "vector", "вектор", "поиск"],
         "safety": ["safety", "guardrail", "этика", "безопасность", "pii"],
-        "statistics": ["a/b", "ab test", "статист", "эксперимент"],
+        "statistics": ["a/b", "ab test", "статист", "эксперимент", "p-value", "confidence"],
+        "experimentation": ["a/b", "ab test", "эксперимент", "variant", "контрольная группа"],
         "product": ["roadmap", "hypothesis", "jtbd", "custdev", "продукт", "метрик"],
+        "product_sense": ["product sense", "продуктовое мышление", "user needs", "потребности пользователя"],
+        "product_execution": ["product execution", "execution", "запуск", "релиз", "rollback", "roadmap"],
+        "north_star": ["north star", "north star metric", "главная метрика"],
+        "prioritization": ["prioritization", "приоритизац", "rice", "ice", "roadmap"],
         "backend": ["backend", "бэкенд", "микросервис", "ручка", "rpc", "http"],
         "frontend": ["frontend", "фронтенд", "react", "typescript", "javascript", "html", "css"],
         "system_design": ["highload", "rps", "шард", "кеш", "cache", "kafka", "очеред", "нагруз"],
@@ -390,6 +397,23 @@ def infer_tags(resume, job):
         "m_and_a": ["m&a", "merger", "acquisition", "слияние", "поглощение", "купить компанию"],
         "growth_strategy": ["growth", "рост", "gmv", "вырастить", "масштабировать"],
         "operations": ["operations", "операцион", "очеред", "мощност", "capacity", "логист"],
+        "data_science": ["data science", "datascience", "ml engineer", "модель", "roc-auc", "auc", "precision", "recall"],
+        "mlops": ["mlops", "model monitoring", "drift", "serving", "rollback model"],
+        "model_evaluation": ["roc-auc", "auc", "precision", "recall", "f1", "pr-auc", "оценка модели"],
+        "recommender_systems": ["recsys", "recommendation", "рекомендатель", "рекомендации", "cold start"],
+        "behavioral": ["behavioral", "star", "поведенчес", "лидерство", "конфликт", "ambiguity", "неопределен"],
+        "stakeholders": ["stakeholder", "стейкхолдер", "заказчик", "конфликт"],
+        "data_quality": ["data quality", "качество данных", "дубликаты", "etl", "дашборд"],
+        "cohort_analysis": ["cohort", "когорт", "retention", "удержание"],
+        "retention": ["retention", "удержание", "churn", "отток"],
+        "api": ["api", "endpoint", "ручка", "rest"],
+        "queue": ["queue", "очеред", "kafka", "rabbitmq", "worker"],
+        "redis": ["redis"],
+        "storage": ["storage", "s3", "файл", "pdf", "object storage"],
+        "search": ["search", "поиск", "autocomplete", "автокомплит"],
+        "payments": ["payment", "оплата", "платеж", "списать"],
+        "idempotency": ["idempotency", "идемпотент", "дважды", "duplicate request"],
+        "coding": ["coding", "leetcode", "кодинг", "алгоритмическая задача"],
         "go": ["go", "golang", "горутины", "goroutine", "каналы", "runtime"],
         "php": ["php"],
         "java": ["java", "jvm", "optional", "hibernate"],

@@ -69,6 +69,7 @@ export OPENAI_API_KEY=""
 - Без `OPENAI_API_KEY`: локальная эвристика + `question_bank.json`, чтобы прототип оставался проверяемым без внешних ключей.
 - `question_bank.json` работает как локальный банк кейсов для подбора релевантных вопросов.
 - В банк добавлены оригинальные русские consulting/case interview кейсы по темам profitability, market sizing, pricing, market entry, growth, M&A и operations.
+- Банк расширен до 101 элемента: добавлены SQL/data analyst, product sense/execution, system design, ML/data science, MLOps, backend/frontend, coding и behavioral STAR-вопросы.
 
 ## Решение Gate 3
 
