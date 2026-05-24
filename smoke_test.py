@@ -79,7 +79,7 @@ def main():
     bot.handle_message(locked_chat_id, "/reset")
     bot.handle_message(locked_chat_id, "/demo")
     locked_text = "\n".join(message["text"] for message in messages if message["chat_id"] == locked_chat_id)
-    assert "Новые резюме и вакансии в пробном режиме не разбираются" in locked_text
+    assert "Новые резюме, вакансии и позиции в пробном режиме не разбираются" in locked_text
     assert bot.sessions[locked_chat_id]["analysis"]
 
     unlimited_chat_id = 7777
@@ -92,6 +92,47 @@ def main():
     unlimited_text = "\n".join(message["text"] for message in messages if message["chat_id"] == unlimited_chat_id)
     assert "Безлимит включен: <b>да</b>" in unlimited_text
     assert "Диагностика готовности" in unlimited_text
+
+    resume_library_chat_id = 2001
+    bot.UNLIMITED_TELEGRAM_IDS.add(str(resume_library_chat_id))
+    bot.handle_message(resume_library_chat_id, "/add_resume")
+    bot.handle_message(resume_library_chat_id, "ML Product Manager")
+    bot.handle_message(
+        resume_library_chat_id,
+        "3 года в AI-продуктах: LLM, RAG, custdev, roadmap, SQL, метрики качества модели.",
+    )
+    bot.handle_message(resume_library_chat_id, "/add_resume")
+    bot.handle_message(resume_library_chat_id, "Backend Go")
+    bot.handle_message(
+        resume_library_chat_id,
+        "4 года backend: Go, PostgreSQL, Kafka, кеши, highload, микросервисы.",
+    )
+    bot.handle_message(resume_library_chat_id, "/resumes")
+    bot.handle_message(resume_library_chat_id, "/use_resume 1")
+    bot.handle_message(resume_library_chat_id, "/start")
+    bot.handle_message(
+        resume_library_chat_id,
+        "Middle ML Product Manager. Нужны LLM/RAG, discovery, roadmap, SQL и оценка качества модели.",
+    )
+    resume_library_text = "\n".join(
+        message["text"] for message in messages if message["chat_id"] == resume_library_chat_id
+    )
+    assert "Мои резюме" in resume_library_text
+    assert "Активное резюме: <b>ML Product Manager</b>" in resume_library_text
+    assert bot.sessions[resume_library_chat_id]["analysis"]
+    assert "LLM" in bot.sessions[resume_library_chat_id]["resume"]
+
+    position_chat_id = 2002
+    bot.UNLIMITED_TELEGRAM_IDS.add(str(position_chat_id))
+    bot.handle_message(position_chat_id, "/position")
+    bot.handle_message(position_chat_id, "Senior product analyst, marketplace, SQL, A/B tests, stakeholders")
+    position_analysis = bot.sessions[position_chat_id]["analysis"]
+    position_text = "\n".join(message["text"] for message in messages if message["chat_id"] == position_chat_id)
+    assert position_analysis["mode"] == "position"
+    assert position_analysis["grade"] == "senior"
+    assert len(position_analysis["questions"]) == 5
+    assert "Вопросы по позиции" in position_text
+    assert "Грейд: <b>senior/lead</b>" in position_text
 
     boundary_chat_id = 1002
     bot.handle_message(boundary_chat_id, "/start")
@@ -121,6 +162,8 @@ def main():
     print("Negative safety scenario: passed")
     print("Trial lock scenario: passed")
     print("Unlimited admin scenario: passed")
+    print("Resume library scenario: passed")
+    print("Position and grade scenario: passed")
     print("\nTranscript preview:")
     for message in messages[:8]:
         print("- " + strip_tags(message["text"]).replace("\n", " ")[:220])

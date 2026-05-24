@@ -15,8 +15,9 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
-BOT_VERSION = "gate3-dz4-v1.1"
+BOT_VERSION = "gate3-dz4-v1.2"
 TRIAL_QUESTION_LIMIT = 5
+RESUME_PREVIEW_LIMIT = 120
 UNLIMITED_TELEGRAM_IDS = {
     item.strip()
     for item in os.environ.get("UNLIMITED_TELEGRAM_IDS", "").replace(";", ",").split(",")
@@ -25,11 +26,13 @@ UNLIMITED_TELEGRAM_IDS = {
 
 MAIN_KEYBOARD = [
     ["/questions", "/mock"],
+    ["/resumes", "/position"],
     ["/reset", "/help"],
 ]
 
 POST_TRIAL_KEYBOARD = [
     ["/mock", "/summary"],
+    ["/resumes", "/position"],
     ["/reset", "/help"],
 ]
 
@@ -130,6 +133,72 @@ def mark_trial_answered(chat_id, answered_count):
         state["completed"] = True
 
 
+def get_resumes(session):
+    return session.setdefault("resumes", [])
+
+
+def active_resume_entry(session):
+    resumes = get_resumes(session)
+    if not resumes:
+        return None
+    index = session.get("active_resume_index", 0)
+    try:
+        index = int(index)
+    except (TypeError, ValueError):
+        index = 0
+    index = max(0, min(index, len(resumes) - 1))
+    session["active_resume_index"] = index
+    return resumes[index]
+
+
+def sync_active_resume(session):
+    entry = active_resume_entry(session)
+    if entry:
+        session["resume"] = entry["text"]
+    else:
+        session.pop("resume", None)
+    return entry
+
+
+def clear_current_flow(session):
+    for key in (
+        "job",
+        "analysis",
+        "mock_index",
+        "answer_scores",
+        "pending_resume_name",
+        "position_profile",
+    ):
+        session.pop(key, None)
+    session["state"] = "idle"
+    sync_active_resume(session)
+
+
+def infer_resume_name(session):
+    return f"Резюме {len(get_resumes(session)) + 1}"
+
+
+def save_resume(session, text, name=None):
+    body = text.strip()
+    entry = {
+        "name": (name or infer_resume_name(session)).strip()[:80],
+        "text": body,
+    }
+    get_resumes(session).append(entry)
+    session["active_resume_index"] = len(get_resumes(session)) - 1
+    session["resume"] = body
+    return entry
+
+
+def set_active_resume(session, index):
+    resumes = get_resumes(session)
+    if index < 0 or index >= len(resumes):
+        return None
+    session["active_resume_index"] = index
+    sync_active_resume(session)
+    return resumes[index]
+
+
 def normalize(text):
     return re.sub(r"[^\w\s+#.-]", " ", text.lower(), flags=re.UNICODE)
 
@@ -156,6 +225,33 @@ def detect_skills(text):
         if any(alias.lower() in lowered for alias in aliases):
             found.append(skill)
     return found
+
+
+def detect_grade(text):
+    lowered = normalize(text)
+    if re.search(r"intern|стаж[её]р|trainee|junior|джун", lowered):
+        return "junior"
+    if re.search(r"senior|сеньор|lead|лид|head|principal", lowered):
+        return "senior"
+    if re.search(r"middle|mid|мидл|мид", lowered):
+        return "middle"
+    return "middle"
+
+
+def grade_label(grade):
+    return {
+        "junior": "junior",
+        "middle": "middle",
+        "senior": "senior/lead",
+    }.get(grade, "middle")
+
+
+def grade_focus(grade):
+    return {
+        "junior": "база и обучаемость",
+        "middle": "самостоятельные решения",
+        "senior": "стратегия и влияние",
+    }.get(grade, "самостоятельные решения")
 
 
 def score_seniority(resume, job):
@@ -466,6 +562,151 @@ def analyze(resume, job):
     return llm_analyze(resume, job, baseline) or baseline
 
 
+def build_position_questions(position_text, grade, required_skills, bank_items=None):
+    bank_questions = bank_items_to_questions(bank_items or [])
+    role = position_text.strip()[:90] or "позиция"
+    skills = (required_skills or ["product", "analytics"])[:4]
+    questions = []
+    for skill in skills:
+        if grade == "junior":
+            title = f"Какие базовые принципы {label_skill(skill)} важны для роли {role}?"
+            rationale = "Для junior-грейда проверяет фундамент, словарь и готовность быстро учиться."
+        elif grade == "senior":
+            title = f"Как бы вы выстроили {label_skill(skill)}-направление для роли {role} с нуля?"
+            rationale = "Для senior/lead-грейда проверяет системность, приоритизацию и влияние на бизнес."
+        else:
+            title = f"Как вы решали бы практическую задачу на {label_skill(skill)} в роли {role}?"
+            rationale = "Для middle-грейда проверяет самостоятельное решение и умение объяснить trade-off."
+        questions.append({"title": title, "rationale": rationale})
+
+    grade_specific = {
+        "junior": [
+            {
+                "title": f"Что вы сделаете в первые 30 дней на позиции {role}, чтобы быстрее стать полезным команде?",
+                "rationale": "Проверяет план адаптации, самостоятельность и умение просить обратную связь.",
+            },
+            {
+                "title": f"Как вы объясните сложную задачу по позиции {role} человеку без технического бэкграунда?",
+                "rationale": "Проверяет коммуникацию и понимание сути, а не заученные термины.",
+            },
+        ],
+        "middle": [
+            {
+                "title": f"Как вы приоритизируете несколько задач для позиции {role}, если сроки конфликтуют?",
+                "rationale": "Проверяет зрелость, оценку рисков и работу со стейкхолдерами.",
+            },
+            {
+                "title": f"Какие метрики покажут, что ваша работа на позиции {role} дала результат?",
+                "rationale": "Проверяет связь действий с измеримым эффектом.",
+            },
+        ],
+        "senior": [
+            {
+                "title": f"Как вы определите стратегию на 6 месяцев для позиции {role}?",
+                "rationale": "Проверяет стратегическое мышление, декомпозицию и фокус на бизнес-результате.",
+            },
+            {
+                "title": f"Как вы будете принимать решение, если команда, бизнес и данные дают разные сигналы?",
+                "rationale": "Проверяет лидерство, работу с неопределенностью и качество решений.",
+            },
+        ],
+    }
+    questions = bank_questions + questions + grade_specific.get(grade, grade_specific["middle"])
+    return questions[:TRIAL_QUESTION_LIMIT]
+
+
+def heuristic_position_analyze(position_text):
+    grade = detect_grade(position_text)
+    required_skills = detect_skills(position_text)
+    bank_items = retrieve_question_bank("", f"{position_text} {grade}")
+    questions = build_position_questions(position_text, grade, required_skills, bank_items)
+    guidance = {
+        "junior": [
+            "Повторить базовые понятия роли и уметь объяснять их простыми словами.",
+            "Подготовить учебные или pet-проекты с понятной задачей, действиями и результатом.",
+            "Потренировать ответы про мотивацию, обучаемость и работу с обратной связью.",
+        ],
+        "middle": [
+            "Подготовить 3-4 самостоятельных кейса с метриками и trade-off.",
+            "Потренировать вопросы про приоритизацию, коммуникацию и работу с неопределенностью.",
+            "Собрать примеры, где вы довели задачу до измеримого результата.",
+        ],
+        "senior": [
+            "Подготовить истории про стратегию, влияние на команду и сложные решения.",
+            "Потренировать system/product design вопросы и оценку бизнес-эффекта.",
+            "Собрать примеры, где вы меняли процесс, снижали риск или влияли на roadmap.",
+        ],
+    }
+    return {
+        "mode": "position",
+        "position": position_text.strip()[:180],
+        "grade": grade,
+        "readiness": 60,
+        "match": 0,
+        "risk": "не оценивается",
+        "focus": grade_focus(grade),
+        "gaps": guidance.get(grade, guidance["middle"]),
+        "questions": questions,
+        "bank_matches": [item.get("id") for item in bank_items],
+        "source": "heuristic",
+    }
+
+
+def llm_position_analyze(position_text, baseline):
+    bank_items = retrieve_question_bank("", f"{position_text} {baseline.get('grade', '')}")
+    bank_context = [
+        {
+            "id": item.get("id"),
+            "company": item.get("company"),
+            "source": item.get("source"),
+            "tags": item.get("tags", []),
+            "difficulty": item.get("difficulty"),
+            "type": item.get("type"),
+            "prompt": item.get("prompt"),
+            "signals": item.get("signals", []),
+            "rubric": item.get("rubric", []),
+        }
+        for item in bank_items
+    ]
+    developer_prompt = (
+        "Ты карьерный AI interview coach. Сгенерируй вопросы для подготовки к интервью по позиции и грейду "
+        "без привязки к конкретному резюме. Учитывай грейд: junior - база и обучаемость, middle - самостоятельная "
+        "практика и trade-off, senior/lead - стратегия, архитектура, влияние и бизнес-результат. "
+        "Используй банк вопросов как RAG-контекст, но не копируй формулировки дословно. "
+        "Верни только валидный JSON без markdown."
+    )
+    user_prompt = (
+        "Собери набор вопросов для тренировки по позиции.\n\n"
+        "Формат JSON:\n"
+        "{\n"
+        '  "focus": "главный фокус подготовки, 1-4 слова",\n'
+        '  "gaps": ["3-5 направлений подготовки"],\n'
+        '  "questions": [{"title": "вопрос", "rationale": "почему этот вопрос вероятен"}]\n'
+        "}\n\n"
+        f"Верни ровно {TRIAL_QUESTION_LIMIT} вопросов. Не больше.\n"
+        f"Грейд должен явно влиять на сложность вопросов: {grade_label(baseline.get('grade'))}.\n\n"
+        f"Baseline heuristic JSON:\n{json.dumps(baseline, ensure_ascii=False)}\n\n"
+        f"Релевантные элементы банка вопросов:\n{json.dumps(bank_context, ensure_ascii=False)}\n\n"
+        f"Позиция и грейд:\n{position_text[:4000]}"
+    )
+    result = openai_json(developer_prompt, user_prompt, max_output_tokens=1500)
+    if not result:
+        return None
+    return {
+        **baseline,
+        "focus": str(result.get("focus", baseline["focus"])).strip()[:80] or baseline["focus"],
+        "gaps": clean_list(result.get("gaps"), 5, baseline["gaps"]),
+        "questions": clean_questions(result.get("questions"), baseline["questions"]),
+        "bank_matches": [item.get("id") for item in bank_items],
+        "source": "openai",
+    }
+
+
+def analyze_position(position_text):
+    baseline = heuristic_position_analyze(position_text)
+    return llm_position_analyze(position_text, baseline) or baseline
+
+
 def build_questions(required_skills, resume_skills, missing_skills, bank_items=None):
     bank_questions = bank_items_to_questions(bank_items or [])
     base_skills = (required_skills or ["product", "analytics"])[:4]
@@ -557,13 +798,13 @@ def render_trial_locked(has_current_analysis=False):
     if has_current_analysis:
         return (
             "У тебя уже активирован пробный набор из 5 вопросов. "
-            "Новые резюме и вакансии в пробном режиме не разбираются.\n\n"
+            "Новые резюме, вакансии и позиции в пробном режиме не разбираются.\n\n"
             "Можно продолжить текущую тренировку через /mock, посмотреть вопросы через /questions "
             "или получить общую оценку через /summary.\n\n"
             + render_more_questions_cta()
         )
     return (
-        "Пробный лимит уже использован: новые резюме, вакансии, вопросы и оценки в бесплатном режиме "
+        "Пробный лимит уже использован: новые резюме, вакансии, позиции, вопросы и оценки в бесплатном режиме "
         "больше не выдаются.\n\n"
         + render_more_questions_cta()
     )
@@ -581,7 +822,7 @@ def render_whoami(chat_id):
 def render_summary(session):
     analysis = session.get("analysis")
     if not analysis:
-        return "Пока нет диагностики. Пришли резюме и вакансию через /start."
+        return "Пока нет диагностики. Пришли резюме и вакансию через /start или позицию через /position."
 
     answer_scores = session.get("answer_scores", [])
     answered_count = len(answer_scores)
@@ -590,6 +831,21 @@ def render_summary(session):
 
     total_questions = min(TRIAL_QUESTION_LIMIT, len(analysis.get("questions", [])))
     avg_answer_score = round(sum(answer_scores[-total_questions:]) / min(answered_count, total_questions))
+    if analysis.get("mode") == "position":
+        focus = html.escape(str(analysis.get("focus", "структура ответа")))
+        weak_spot = html.escape((analysis.get("gaps") or ["Добавить больше конкретики и метрик в ответы."])[0])
+        return (
+            "<b>Общая оценка ответов по позиции</b>\n\n"
+            f"Итог по тренировке: <b>{avg_answer_score}/100</b> - {html.escape(readiness_label(avg_answer_score))}\n"
+            f"Пройдено вопросов: <b>{min(answered_count, total_questions)}/{total_questions}</b>\n"
+            f"Позиция: <b>{html.escape(analysis.get('position', 'не указана'))}</b>\n"
+            f"Грейд: <b>{html.escape(grade_label(analysis.get('grade')))}</b>\n\n"
+            f"<b>Что прокачать перед интервью</b>\n"
+            f"Главный фокус: <b>{focus}</b>\n"
+            f"Первое направление: {weak_spot}\n\n"
+            "Рекомендация: подготовь 2-3 истории под этот грейд, добавь метрики и потренируй ответы на текущий набор вопросов."
+        )
+
     overall_score = combined_readiness_score(analysis, avg_answer_score)
     weak_spot = html.escape((analysis.get("gaps") or ["Добавить больше конкретики и метрик в ответы."])[0])
     focus = html.escape(str(analysis.get("focus", "структура ответа")))
@@ -698,8 +954,46 @@ def fmt_list(items):
     return "\n".join(f"• {html.escape(item)}" for item in items)
 
 
+def render_resumes(session):
+    resumes = get_resumes(session)
+    if not resumes:
+        return (
+            "<b>Мои резюме</b>\n\n"
+            "Пока нет сохраненных резюме.\n\n"
+            "Добавить резюме: /add_resume\n"
+            "Быстрый сценарий с новым резюме и вакансией: /start"
+        )
+
+    active_index = session.get("active_resume_index", 0)
+    lines = ["<b>Мои резюме</b>"]
+    for index, resume in enumerate(resumes, 1):
+        marker = "активное" if index - 1 == active_index else "сохранено"
+        preview = " ".join(resume["text"].split())[:RESUME_PREVIEW_LIMIT]
+        lines.append(
+            f"\n<b>{index}. {html.escape(resume['name'])}</b> - {marker}\n"
+            f"{html.escape(preview)}"
+        )
+    lines.append(
+        "\nВыбрать активное: <code>/use_resume 2</code>\n"
+        "Добавить новое: /add_resume\n"
+        "Разобрать вакансию под активное резюме: /start"
+    )
+    return "\n".join(lines)
+
+
 def render_report(analysis):
     bank_count = len(analysis.get("bank_matches", []))
+    if analysis.get("mode") == "position":
+        return (
+            f"<b>Вопросы по позиции</b>\n\n"
+            f"Позиция: <b>{html.escape(analysis.get('position', 'не указана'))}</b>\n"
+            f"Грейд: <b>{html.escape(grade_label(analysis.get('grade')))}</b>\n"
+            f"Фокус подготовки: <b>{html.escape(analysis['focus'])}</b>\n\n"
+            f"<b>Что повторить</b>\n{fmt_list(analysis['gaps'])}\n\n"
+            f"Банк вопросов: подобрано <b>{bank_count}</b> релевантных кейсов\n\n"
+            f"Я подготовил <b>{TRIAL_QUESTION_LIMIT} примерных вопросов</b> по позиции и грейду. "
+            f"Напиши /questions, чтобы посмотреть список, или /mock, чтобы начать тренировку."
+        )
     return (
         f"<b>Диагностика готовности</b>\n\n"
         f"Readiness score: <b>{analysis['readiness']}/100</b>\n"
@@ -714,7 +1008,14 @@ def render_report(analysis):
 
 
 def render_questions(analysis):
-    lines = [f"<b>{TRIAL_QUESTION_LIMIT} примерных вопросов по вакансии</b>"]
+    if analysis.get("mode") == "position":
+        header = (
+            f"{TRIAL_QUESTION_LIMIT} вопросов по позиции: "
+            f"{analysis.get('position', 'не указана')} ({grade_label(analysis.get('grade'))})"
+        )
+    else:
+        header = f"{TRIAL_QUESTION_LIMIT} примерных вопросов по вакансии"
+    lines = [f"<b>{html.escape(header)}</b>"]
     for index, question in enumerate(analysis["questions"][:TRIAL_QUESTION_LIMIT], 1):
         lines.append(
             f"\n<b>{index}. {html.escape(question['title'])}</b>\n"
@@ -728,6 +1029,10 @@ def render_help():
     return (
         "<b>ИИ-тренер интервью: команды</b>\n\n"
         "/start - начать со своего резюме и вакансии\n"
+        "/add_resume - добавить резюме в библиотеку\n"
+        "/resumes - посмотреть резюме и активное резюме\n"
+        "/use_resume 2 - выбрать активное резюме\n"
+        "/position - получить вопросы по позиции и грейду\n"
         "/questions - показать вероятные вопросы\n"
         "/mock - начать тренировочный вопрос\n"
         "/reset - начать заново"
@@ -739,16 +1044,20 @@ def render_gate3_instructions():
     return (
         "<b>Инструкция для ДЗ 4 / Gate 3</b>\n\n"
         "Это рабочий Telegram-прототип Interview Coach AI. Он проходит ключевой сценарий:\n"
-        "резюме + вакансия -> оценка готовности -> вероятные вопросы -> тренировочный ответ -> разбор ответа.\n\n"
+        "резюме + вакансия -> оценка готовности -> вероятные вопросы -> тренировочный ответ -> разбор ответа.\n"
+        "Еще один сценарий: позиция + грейд -> вопросы по роли -> тренировочный ответ -> общая оценка.\n\n"
         "<b>Как проверить за 3 минуты</b>\n"
         "1. Нажать /demo.\n"
         "2. Нажать /questions и посмотреть список вопросов.\n"
         "3. Нажать /mock и отправить ответ одним сообщением.\n"
-        "4. Нажать /safety и /export.\n\n"
+        "4. Нажать /position и отправить роль с грейдом, например Senior product analyst.\n"
+        "5. Нажать /safety и /export.\n\n"
         "<b>Режим сейчас</b>\n"
         f"{html.escape(mode)}. Бот работает даже без OPENAI_API_KEY: тогда используется эвристика и локальный банк вопросов.\n\n"
         "<b>Что покрыто прототипом</b>\n"
         "• целевой сценарий подготовки;\n"
+        "• несколько резюме и выбор активного резюме;\n"
+        "• вопросы по позиции с учетом грейда;\n"
         "• граничный сценарий с коротким резюме;\n"
         "• негативный сценарий с просьбой выдумать опыт;\n"
         "• privacy/safety режим без отправки данных в OpenAI, если ключ не задан."
@@ -771,11 +1080,15 @@ def render_tests():
         "<b>Проверенные сценарии для ДЗ 4</b>\n\n"
         "<b>1. Целевой</b>\n"
         "Команда /demo -> /questions -> /mock. Ожидается readiness report, вопросы из банка и оценка ответа.\n\n"
-        "<b>2. Граничный</b>\n"
+        "<b>2. Несколько резюме</b>\n"
+        "Команды /add_resume -> /resumes -> /use_resume 1 -> /start. Ожидается выбор активного резюме под вакансию.\n\n"
+        "<b>3. Позиция и грейд</b>\n"
+        "Команда /position и сообщение с ролью, например Senior product analyst. Ожидаются вопросы по роли без резюме.\n\n"
+        "<b>4. Граничный</b>\n"
         "Очень короткое резюме + сложная вакансия. Ожидается более высокий риск и список слабых сигналов.\n\n"
-        "<b>3. Негативный</b>\n"
+        "<b>5. Негативный</b>\n"
         "Ответ с просьбой придумать несуществующий опыт. Ожидается снижение score и рекомендация не добавлять фейковый опыт.\n\n"
-        "<b>4. Privacy/fallback</b>\n"
+        "<b>6. Privacy/fallback</b>\n"
         "OPENAI_API_KEY не задан. Ожидается работа без внешних AI-вызовов через локальную эвристику и question_bank.json.\n\n"
         "Автоматическая офлайн-проверка: <code>python smoke_test.py</code>."
     )
@@ -787,12 +1100,21 @@ def render_status(session):
     state = session.get("state", "idle")
     has_resume = "да" if session.get("resume") else "нет"
     has_job = "да" if session.get("job") else "нет"
+    active_resume = active_resume_entry(session)
+    active_resume_name = active_resume["name"] if active_resume else "нет"
     if analysis:
-        summary = (
-            f"readiness: <b>{analysis['readiness']}/100</b>, "
-            f"risk: <b>{html.escape(analysis['risk'])}</b>, "
-            f"questions: <b>{len(analysis.get('questions', []))}</b>"
-        )
+        if analysis.get("mode") == "position":
+            summary = (
+                f"position: <b>{html.escape(analysis.get('position', 'не указана'))}</b>, "
+                f"grade: <b>{html.escape(grade_label(analysis.get('grade')))}</b>, "
+                f"questions: <b>{len(analysis.get('questions', []))}</b>"
+            )
+        else:
+            summary = (
+                f"readiness: <b>{analysis['readiness']}/100</b>, "
+                f"risk: <b>{html.escape(analysis['risk'])}</b>, "
+                f"questions: <b>{len(analysis.get('questions', []))}</b>"
+            )
     else:
         summary = "анализ еще не собран"
     return (
@@ -800,6 +1122,8 @@ def render_status(session):
         f"Версия: <code>{BOT_VERSION}</code>\n"
         f"Режим AI-слоя: <b>{html.escape(mode)}</b>\n"
         f"Состояние диалога: <b>{html.escape(state)}</b>\n"
+        f"Сохранено резюме: <b>{len(get_resumes(session))}</b>\n"
+        f"Активное резюме: <b>{html.escape(active_resume_name)}</b>\n"
         f"Резюме получено: <b>{has_resume}</b>\n"
         f"Вакансия получена: <b>{has_job}</b>\n"
         f"Текущий результат: {summary}\n\n"
@@ -810,13 +1134,28 @@ def render_status(session):
 def render_export(session):
     analysis = session.get("analysis")
     if not analysis:
-        return "Пока нечего экспортировать. Пришли резюме и вакансию через /start."
+        return "Пока нечего экспортировать. Пришли резюме и вакансию через /start или позицию через /position."
     questions = analysis.get("questions", [])
     top_questions = "\n".join(
         f"{index}. {html.escape(question['title'])}"
         for index, question in enumerate(questions[:TRIAL_QUESTION_LIMIT], 1)
     )
     bank_matches = ", ".join(analysis.get("bank_matches", [])) or "нет"
+    if analysis.get("mode") == "position":
+        return (
+            "<b>Краткий отчет для сдачи</b>\n\n"
+            f"Режим: <b>вопросы по позиции без резюме</b>\n"
+            f"Позиция: <b>{html.escape(analysis.get('position', 'не указана'))}</b>\n"
+            f"Грейд: <b>{html.escape(grade_label(analysis.get('grade')))}</b>\n"
+            f"Фокус: <b>{html.escape(analysis['focus'])}</b>\n"
+            f"AI-слой: <b>{'OpenAI API' if analysis.get('source') == 'openai' else 'локальная эвристика'}</b>\n"
+            f"Подобранные кейсы банка: <code>{html.escape(bank_matches)}</code>\n\n"
+            "<b>Направления подготовки</b>\n"
+            f"{fmt_list(analysis['gaps'])}\n\n"
+            "<b>Топ вопросов</b>\n"
+            f"{top_questions}\n\n"
+            "Проверочный путь: /position -> /questions -> /mock -> ответ -> /summary."
+        )
     return (
         "<b>Краткий отчет для сдачи</b>\n\n"
         f"Readiness score: <b>{analysis['readiness']}/100</b>\n"
@@ -835,22 +1174,35 @@ def render_export(session):
 
 def handle_message(chat_id, text):
     session = sessions.setdefault(chat_id, {"state": "idle"})
-    command = text.strip().lower()
+    raw_text = text.strip()
+    command = raw_text.lower()
 
     if command in {"/start", "старт"}:
         if has_used_trial(chat_id):
             send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
             return
-        session.clear()
-        session["state"] = "waiting_resume"
-        send_message(
-            chat_id,
-            "Привет. Я ИИ-тренер интервью.\n\nПришли резюме текстом, а следующим сообщением - вакансию. "
-            f"Я оценю готовность, найду слабые места и подберу {TRIAL_QUESTION_LIMIT} примерных вопросов, "
-            "похожих на реальные задачи для этой роли.\n\nПосле тренировочного ответа дам общую оценку "
-            "и направление, что прокачать перед интервью.",
-            keyboard=MAIN_KEYBOARD,
-        )
+        clear_current_flow(session)
+        active_resume = active_resume_entry(session)
+        if active_resume:
+            session["state"] = "waiting_job"
+            send_message(
+                chat_id,
+                f"Активное резюме: <b>{html.escape(active_resume['name'])}</b>.\n\n"
+                "Пришли описание вакансии одним сообщением. Я оценю готовность под это резюме "
+                f"и подберу {TRIAL_QUESTION_LIMIT} примерных вопросов.\n\n"
+                "Выбрать другое резюме можно через /resumes.",
+                keyboard=MAIN_KEYBOARD,
+            )
+        else:
+            session["state"] = "waiting_resume"
+            send_message(
+                chat_id,
+                "Привет. Я ИИ-тренер интервью.\n\nПришли резюме текстом, а следующим сообщением - вакансию. "
+                f"Я сохраню резюме, сделаю его активным, оценю готовность и подберу {TRIAL_QUESTION_LIMIT} "
+                "примерных вопросов, похожих на реальные задачи для этой роли.\n\n"
+                "Можно также добавить несколько резюме через /add_resume или получить вопросы по позиции через /position.",
+                keyboard=MAIN_KEYBOARD,
+            )
         return
 
     if command == "/whoami":
@@ -859,6 +1211,59 @@ def handle_message(chat_id, text):
 
     if command in {"/help", "help", "помощь"}:
         send_message(chat_id, render_help(), keyboard=MAIN_KEYBOARD)
+        return
+
+    if command == "/resumes":
+        send_message(chat_id, render_resumes(session), keyboard=MAIN_KEYBOARD)
+        return
+
+    if command == "/add_resume":
+        session["state"] = "waiting_resume_name"
+        session.pop("pending_resume_name", None)
+        send_message(
+            chat_id,
+            "Как назвать резюме? Например: <b>ML PM</b>, <b>Data Analyst</b> или <b>Backend Go</b>.",
+            keyboard=MAIN_KEYBOARD,
+        )
+        return
+
+    if command.startswith("/use_resume"):
+        parts = command.split()
+        if len(parts) < 2:
+            send_message(chat_id, render_resumes(session), keyboard=MAIN_KEYBOARD)
+            return
+        try:
+            resume_index = int(parts[1]) - 1
+        except ValueError:
+            send_message(chat_id, "Укажи номер резюме, например: <code>/use_resume 2</code>.", keyboard=MAIN_KEYBOARD)
+            return
+        active_resume = set_active_resume(session, resume_index)
+        if not active_resume:
+            send_message(chat_id, "Не нашел резюме с таким номером. Проверь список через /resumes.", keyboard=MAIN_KEYBOARD)
+            return
+        clear_current_flow(session)
+        set_active_resume(session, resume_index)
+        send_message(
+            chat_id,
+            f"Активное резюме: <b>{html.escape(active_resume['name'])}</b>.\n\n"
+            "Теперь напиши /start и пришли вакансию под это резюме.",
+            keyboard=MAIN_KEYBOARD,
+        )
+        return
+
+    if command == "/position":
+        if has_used_trial(chat_id):
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
+        clear_current_flow(session)
+        session["state"] = "waiting_position"
+        send_message(
+            chat_id,
+            "Пришли позицию и грейд одним сообщением.\n\n"
+            "Пример: <code>Middle ML Product Manager, fintech, LLM/RAG</code>\n"
+            "Или: <code>Junior data analyst, SQL, A/B tests</code>",
+            keyboard=MAIN_KEYBOARD,
+        )
         return
 
     if command == "/gate3":
@@ -885,20 +1290,31 @@ def handle_message(chat_id, text):
         if has_used_trial(chat_id):
             send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
             return
-        session.clear()
-        session["state"] = "waiting_resume"
-        send_message(chat_id, "Ок, начинаем заново. Пришли резюме текстом.", keyboard=MAIN_KEYBOARD)
+        clear_current_flow(session)
+        active_resume = active_resume_entry(session)
+        if active_resume:
+            session["state"] = "waiting_job"
+            send_message(
+                chat_id,
+                f"Ок, текущий разбор сброшен. Активное резюме: <b>{html.escape(active_resume['name'])}</b>.\n\n"
+                "Пришли новую вакансию или выбери другое резюме через /resumes.",
+                keyboard=MAIN_KEYBOARD,
+            )
+        else:
+            session["state"] = "waiting_resume"
+            send_message(chat_id, "Ок, начинаем заново. Пришли резюме текстом.", keyboard=MAIN_KEYBOARD)
         return
 
     if command == "/demo":
         if has_used_trial(chat_id):
             send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
             return
+        clear_current_flow(session)
+        save_resume(session, SAMPLE_RESUME, "Demo product/data analyst")
         analysis = analyze(SAMPLE_RESUME, SAMPLE_JOB)
         session.update(
             {
                 "state": "idle",
-                "resume": SAMPLE_RESUME,
                 "job": SAMPLE_JOB,
                 "analysis": analysis,
                 "mock_index": 0,
@@ -914,7 +1330,7 @@ def handle_message(chat_id, text):
             if has_used_trial(chat_id):
                 send_message(chat_id, render_trial_locked(False), keyboard=POST_TRIAL_KEYBOARD)
                 return
-            send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
+            send_message(chat_id, "Сначала пришли резюме и вакансию через /start или позицию через /position.", keyboard=MAIN_KEYBOARD)
             return
         send_message(chat_id, render_questions(analysis), keyboard=MAIN_KEYBOARD)
         return
@@ -925,7 +1341,7 @@ def handle_message(chat_id, text):
             if has_used_trial(chat_id):
                 send_message(chat_id, render_trial_locked(False), keyboard=POST_TRIAL_KEYBOARD)
                 return
-            send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
+            send_message(chat_id, "Сначала пришли резюме и вакансию через /start или позицию через /position.", keyboard=MAIN_KEYBOARD)
             return
         questions = analysis.get("questions", [])[:TRIAL_QUESTION_LIMIT]
         if not questions:
@@ -954,14 +1370,59 @@ def handle_message(chat_id, text):
         send_message(chat_id, render_safety(), keyboard=MAIN_KEYBOARD)
         return
 
+    if session.get("state") == "waiting_resume_name":
+        session["pending_resume_name"] = raw_text[:80] or infer_resume_name(session)
+        session["state"] = "waiting_new_resume_text"
+        send_message(
+            chat_id,
+            f"Название сохранено: <b>{html.escape(session['pending_resume_name'])}</b>.\n\n"
+            "Теперь пришли текст резюме одним сообщением.",
+            keyboard=MAIN_KEYBOARD,
+        )
+        return
+
+    if session.get("state") == "waiting_new_resume_text":
+        entry = save_resume(session, raw_text, session.pop("pending_resume_name", None))
+        clear_current_flow(session)
+        sync_active_resume(session)
+        send_message(
+            chat_id,
+            f"Сохранил резюме <b>{html.escape(entry['name'])}</b> и сделал его активным.\n\n"
+            "Теперь можно написать /start и прислать вакансию под это резюме.",
+            keyboard=MAIN_KEYBOARD,
+        )
+        return
+
+    if session.get("state") == "waiting_position":
+        if has_used_trial(chat_id):
+            session["state"] = "idle"
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
+        position_text = raw_text
+        send_message(chat_id, "Собираю вопросы по позиции и грейду. Обычно это занимает несколько секунд.")
+        analysis = analyze_position(position_text)
+        session["position_profile"] = position_text
+        session["job"] = position_text
+        session["analysis"] = analysis
+        session["mock_index"] = 0
+        session["answer_scores"] = []
+        session["state"] = "idle"
+        mark_trial_analysis_used(chat_id)
+        send_message(chat_id, render_report(analysis), keyboard=MAIN_KEYBOARD)
+        return
+
     if session.get("state") == "waiting_resume":
         if has_used_trial(chat_id):
             session["state"] = "idle"
             send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
             return
-        session["resume"] = text.strip()
+        save_resume(session, raw_text, infer_resume_name(session))
         session["state"] = "waiting_job"
-        send_message(chat_id, "Принял резюме. Теперь пришли описание вакансии.")
+        send_message(
+            chat_id,
+            "Принял и сохранил резюме как активное. Теперь пришли описание вакансии.",
+            keyboard=MAIN_KEYBOARD,
+        )
         return
 
     if session.get("state") == "waiting_job":
@@ -969,11 +1430,13 @@ def handle_message(chat_id, text):
             session["state"] = "idle"
             send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
             return
-        session["job"] = text.strip()
+        sync_active_resume(session)
+        session["job"] = raw_text
         send_message(chat_id, "Собираю диагностику. Обычно это занимает несколько секунд.")
         analysis = analyze(session["resume"], session["job"])
         session["analysis"] = analysis
         session["mock_index"] = 0
+        session["answer_scores"] = []
         session["state"] = "idle"
         mark_trial_analysis_used(chat_id)
         send_message(chat_id, render_report(analysis), keyboard=MAIN_KEYBOARD)
@@ -985,11 +1448,12 @@ def handle_message(chat_id, text):
         mock_index = min(session.get("mock_index", 0), len(questions) - 1)
         question = questions[mock_index].get("title", "")
         send_message(chat_id, "Оцениваю ответ по рубрике.")
+        resume_for_scoring = "" if analysis.get("mode") == "position" else session.get("resume", "")
         score, verdict, advice = score_answer(
-            text,
+            raw_text,
             analysis,
             question=question,
-            resume=session.get("resume", ""),
+            resume=resume_for_scoring,
             job=session.get("job", ""),
         )
         answered_count = session.get("mock_index", 0) + 1
