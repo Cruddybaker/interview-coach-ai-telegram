@@ -4,6 +4,11 @@
 
 `резюме -> вакансия -> readiness score -> вопросы -> mock-ответ -> feedback`.
 
+Живой бот: [@interview_coach_ai_demo_bot](https://t.me/interview_coach_ai_demo_bot)
+Публичная проверка сервиса: [https://interview-coach-ai-telegram.onrender.com/health](https://interview-coach-ai-telegram.onrender.com/health)
+
+Сервис развернут на Render. Сейчас используется бесплатный план, потому в Render-аккаунте не добавлена платежная карта; для режима без засыпания нужно переключить сервис на Starter после добавления billing.
+
 Бот написан на Python без сторонних библиотек. Основные файлы:
 
 - `bot.py` - локальный режим через long polling, работает только пока включен компьютер.

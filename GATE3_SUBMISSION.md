@@ -1,5 +1,10 @@
 # ДЗ 4 / Gate 3: инструкция проверки Telegram-прототипа
 
+Живой Telegram-бот: [@interview_coach_ai_demo_bot](https://t.me/interview_coach_ai_demo_bot)
+Health-check сервиса: [https://interview-coach-ai-telegram.onrender.com/health](https://interview-coach-ai-telegram.onrender.com/health)
+
+Важно: сервис развернут на Render Free, потому в аккаунте Render пока нет платежной карты. Для режима 24/7 без засыпания нужно переключить план на Starter после добавления billing.
+
 ## Что это
 
 Рабочий Telegram-прототип Interview Coach AI. Бот принимает резюме и вакансию, строит оценку готовности, показывает слабые места, подбирает вероятные вопросы и оценивает тренировочный ответ.
