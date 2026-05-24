@@ -39,6 +39,15 @@ SKILL_ALIASES = {
     "ml": ["machine learning", "ml", "llm", "rag", "prompt", "model", "модель", "ai", "ии"],
     "product": ["product", "roadmap", "jtbd", "hypothesis", "custdev", "метрики", "продукт"],
     "english": ["english", "английский", "b2", "c1"],
+    "backend": ["backend", "бэкенд", "go", "golang", "php", "java", "микросервис", "rpc", "http", "api"],
+    "frontend": ["frontend", "фронтенд", "javascript", "typescript", "react", "html", "css", "браузер"],
+    "system_design": ["system design", "highload", "rps", "шард", "кеш", "cache", "kafka", "очеред"],
+    "systems": ["linux", "kernel", "syscall", "runtime", "память", "горутины", "goroutine", "канал"],
+    "database": ["рсубд", "субд", "postgres", "transaction", "транзакц", "индекс", "scd", "cdc"],
+    "algorithms": ["алгоритм", "структур", "сложность", "сортиров", "дерево", "список", "матриц"],
+    "business_analysis": ["системный аналитик", "bpmn", "uml", "требован", "интеграц", "er-модель"],
+    "banking": ["банк", "сбер", "тинькофф", "т-банк", "кредит", "бирж", "инвестиц"],
+    "marketplace": ["ozon", "озон", "авито", "маркетплейс"],
 }
 
 SKILL_LABELS = {
@@ -50,6 +59,15 @@ SKILL_LABELS = {
     "ml": "ML/LLM",
     "product": "product discovery",
     "english": "английский",
+    "backend": "backend",
+    "frontend": "frontend",
+    "system_design": "system design",
+    "systems": "системное программирование",
+    "database": "базы данных",
+    "algorithms": "алгоритмы",
+    "business_analysis": "системный анализ",
+    "banking": "банковский домен",
+    "marketplace": "маркетплейс",
 }
 
 SAMPLE_RESUME = (
@@ -139,6 +157,24 @@ def infer_tags(resume, job):
         "safety": ["safety", "guardrail", "этика", "безопасность", "pii"],
         "statistics": ["a/b", "ab test", "статист", "эксперимент"],
         "product": ["roadmap", "hypothesis", "jtbd", "custdev", "продукт", "метрик"],
+        "backend": ["backend", "бэкенд", "микросервис", "ручка", "rpc", "http"],
+        "frontend": ["frontend", "фронтенд", "react", "typescript", "javascript", "html", "css"],
+        "system_design": ["highload", "rps", "шард", "кеш", "cache", "kafka", "очеред", "нагруз"],
+        "systems": ["linux", "syscall", "kernel", "runtime", "goroutine", "горутины", "каналы"],
+        "database": ["postgres", "рсубд", "субд", "транзакц", "индекс", "scd", "cdc"],
+        "algorithms": ["алгоритм", "структур", "сортиров", "сложность", "дерево", "список"],
+        "business_analysis": ["системный аналитик", "bpmn", "требован", "интеграц", "er"],
+        "banking": ["банк", "сбер", "тинькофф", "т-банк", "кредит", "инвестиц"],
+        "marketplace": ["ozon", "озон", "авито", "маркетплейс"],
+        "go": ["go", "golang", "горутины", "goroutine", "каналы", "runtime"],
+        "php": ["php"],
+        "java": ["java", "jvm", "optional", "hibernate"],
+        "javascript": ["javascript", "typescript", "js", "ts", "react"],
+        "cache": ["cache", "кеш", "lru", "ttl"],
+        "kafka": ["kafka", "дубликаты", "at-least-once", "exactly-once"],
+        "scd": ["scd", "slowly changing dimensions"],
+        "cdc": ["cdc", "change data capture"],
+        "testing": ["pytest", "unittest", "jest", "тесты", "mock", "моки"],
     }
     for tag, keywords in keyword_tags.items():
         if any(keyword in lowered for keyword in keywords):
@@ -148,11 +184,27 @@ def infer_tags(resume, job):
 
 def retrieve_question_bank(resume, job, limit=6):
     tags = infer_tags(resume, job)
+    query_words = set(tokenize(f"{resume} {job}"))
     scored = []
     for item in load_question_bank():
         item_tags = set(item.get("tags", []))
-        score = len(tags & item_tags)
-        if score:
+        score = len(tags & item_tags) * 5
+        item_text = normalize(
+            " ".join(
+                [
+                    str(item.get("company", "")),
+                    str(item.get("source", "")),
+                    str(item.get("type", "")),
+                    str(item.get("difficulty", "")),
+                    str(item.get("prompt", "")),
+                    " ".join(item.get("signals", [])),
+                    " ".join(item_tags),
+                ]
+            )
+        )
+        keyword_hits = sum(1 for word in query_words if len(word) > 3 and word in item_text)
+        score += min(keyword_hits, 8)
+        if score > 0:
             scored.append((score, item))
     scored.sort(key=lambda pair: (-pair[0], pair[1].get("difficulty", ""), pair[1].get("id", "")))
     return [item for _, item in scored[:limit]]
@@ -165,7 +217,9 @@ def bank_items_to_questions(items):
         if not prompt:
             continue
         signals = ", ".join(item.get("signals", [])[:4])
-        rationale = f"Похоже на реальные задания по тегам: {signals}." if signals else "Похоже на практический кейс для этой роли."
+        source = item.get("company") or item.get("source")
+        prefix = f"Из банка реальных задач: {source}. " if source else "Из банка практических задач. "
+        rationale = f"{prefix}Проверяет: {signals}." if signals else f"{prefix}Подходит для этой роли."
         questions.append({"title": prompt[:280], "rationale": rationale[:240]})
     return questions
 
@@ -308,11 +362,14 @@ def llm_analyze(resume, job, baseline):
     bank_context = [
         {
             "id": item.get("id"),
+            "company": item.get("company"),
+            "source": item.get("source"),
             "tags": item.get("tags", []),
             "difficulty": item.get("difficulty"),
             "type": item.get("type"),
             "prompt": item.get("prompt"),
             "signals": item.get("signals", []),
+            "rubric": item.get("rubric", []),
         }
         for item in bank_items
     ]

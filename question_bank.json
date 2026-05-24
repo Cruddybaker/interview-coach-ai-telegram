@@ -1,98 +1,629 @@
 [
   {
     "id": "sql_funnel_001",
+    "company": "Product/Data",
+    "source": "synthetic baseline",
     "tags": ["sql", "analytics", "product"],
     "difficulty": "junior-middle",
     "type": "practical_task",
     "prompt": "Дана таблица events(user_id, event_name, event_time, source). Посчитайте конверсию по этапам signup -> application_started -> application_submitted за последние 30 дней и найдите самый слабый этап.",
-    "signals": ["SQL", "воронка", "агрегации", "продуктовые метрики"]
+    "signals": ["SQL", "воронка", "агрегации", "продуктовые метрики"],
+    "rubric": ["строит funnel по пользователям", "считает конверсию между шагами", "сегментирует по source"]
   },
   {
     "id": "ab_test_001",
+    "company": "Product/Data",
+    "source": "synthetic baseline",
     "tags": ["analytics", "product", "statistics"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "Команда изменила onboarding и видит рост конверсии на 4%. Как проверить, что эффект настоящий, и какие метрики нужно посмотреть кроме основной конверсии?",
-    "signals": ["A/B test", "guardrail metrics", "статистическая значимость", "продуктовое мышление"]
+    "signals": ["A/B test", "guardrail metrics", "статистическая значимость", "продуктовое мышление"],
+    "rubric": ["формулирует гипотезу", "проверяет дизайн эксперимента", "называет guardrail-метрики"]
   },
   {
     "id": "metric_decomposition_001",
+    "company": "Product/Data",
+    "source": "synthetic baseline",
     "tags": ["analytics", "product"],
     "difficulty": "junior-middle",
     "type": "case",
     "prompt": "У сервиса упало число успешных заявок на 12% неделя к неделе. Разложите проблему на метрики и опишите план диагностики.",
-    "signals": ["декомпозиция", "воронка", "гипотезы", "приоритизация"]
+    "signals": ["декомпозиция", "воронка", "гипотезы", "приоритизация"],
+    "rubric": ["разделяет трафик и конверсию", "ищет сегменты", "строит план проверки"]
   },
   {
     "id": "ml_eval_001",
+    "company": "Product/ML",
+    "source": "synthetic baseline",
     "tags": ["ml", "product", "analytics"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "Вы запускаете AI-фичу, которая оценивает ответы кандидата на интервью. Какие offline и online метрики качества вы выберете и почему?",
-    "signals": ["LLM eval", "human eval", "precision", "user value", "safety"]
+    "signals": ["LLM eval", "human eval", "precision", "user value", "safety"],
+    "rubric": ["разделяет offline и online eval", "учитывает безопасность", "связывает качество с ценностью"]
   },
   {
     "id": "rag_quality_001",
+    "company": "Product/ML",
+    "source": "synthetic baseline",
     "tags": ["ml", "product", "rag"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "Пользователь загрузил резюме и вакансию, а AI выдал нерелевантные вопросы. Где может ломаться RAG/LLM pipeline и как вы будете это проверять?",
-    "signals": ["RAG", "retrieval", "prompting", "eval set", "debugging"]
+    "signals": ["RAG", "retrieval", "prompting", "eval set", "debugging"],
+    "rubric": ["проверяет retrieval", "проверяет prompt", "предлагает eval-set"]
   },
   {
     "id": "prompt_safety_001",
+    "company": "Product/ML",
+    "source": "synthetic baseline",
     "tags": ["ml", "product", "safety"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "Кандидат просит AI придумать несуществующий опыт для резюме. Как продукт должен ответить и какую safety-метрику вы бы добавили?",
-    "signals": ["AI safety", "guardrails", "policy", "честность"]
+    "signals": ["AI safety", "guardrails", "policy", "честность"],
+    "rubric": ["не помогает обманывать", "предлагает честную формулировку", "вводит метрику нарушений"]
   },
   {
     "id": "unit_economics_001",
+    "company": "Product/Finance",
+    "source": "synthetic baseline",
     "tags": ["finance", "product"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "AI-сервис подготовки к интервью стоит 990 рублей в месяц. Стоимость LLM-инференса - 25 рублей на активную сессию. Какие метрики нужны, чтобы понять, сходится ли экономика?",
-    "signals": ["unit economics", "CAC", "LTV", "gross margin", "retention"]
+    "signals": ["unit economics", "CAC", "LTV", "gross margin", "retention"],
+    "rubric": ["считает gross margin", "учитывает retention", "оценивает CAC/LTV"]
   },
   {
     "id": "stakeholder_001",
+    "company": "Product/Data",
+    "source": "synthetic baseline",
     "tags": ["communication", "product"],
     "difficulty": "junior-middle",
     "type": "behavioral",
     "prompt": "Расскажите о ситуации, когда стейкхолдер просил сделать фичу, но данные показывали, что проблема в другом. Как вы действовали?",
-    "signals": ["stakeholder management", "данные", "конфликт", "коммуникация"]
+    "signals": ["stakeholder management", "данные", "конфликт", "коммуникация"],
+    "rubric": ["говорит через данные", "не обесценивает стейкхолдера", "фиксирует решение"]
   },
   {
     "id": "roadmap_001",
+    "company": "Product/ML",
+    "source": "synthetic baseline",
     "tags": ["product", "analytics"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "У вас есть три гипотезы: улучшить резюме, добавить mock-интервью, сделать live-copilot. Как вы приоритизируете roadmap на 4 недели?",
-    "signals": ["roadmap", "RICE", "risk", "user research"]
+    "signals": ["roadmap", "RICE", "risk", "user research"],
+    "rubric": ["сравнивает value/risk/effort", "выделяет MVP", "планирует проверку"]
   },
   {
     "id": "python_analysis_001",
+    "company": "Product/Data",
+    "source": "synthetic baseline",
     "tags": ["python", "analytics"],
     "difficulty": "junior-middle",
     "type": "practical_task",
     "prompt": "Есть CSV с откликами на вакансии: user_id, vacancy_id, status, created_at. Как на Python найти конверсию из отклика в интервью по неделям?",
-    "signals": ["Python", "pandas", "groupby", "time series"]
+    "signals": ["Python", "pandas", "groupby", "time series"],
+    "rubric": ["парсит даты", "группирует по неделям", "считает конверсию по статусам"]
   },
   {
     "id": "english_interview_001",
+    "company": "Communication",
+    "source": "synthetic baseline",
     "tags": ["english", "communication"],
     "difficulty": "junior-middle",
     "type": "behavioral",
     "prompt": "Answer in English: tell me about a project where you used data to influence a product decision.",
-    "signals": ["English", "communication", "STAR", "data storytelling"]
+    "signals": ["English", "communication", "STAR", "data storytelling"],
+    "rubric": ["структура STAR", "понятный английский", "есть влияние на решение"]
   },
   {
     "id": "product_sense_001",
+    "company": "Product/ML",
+    "source": "synthetic baseline",
     "tags": ["product", "analytics"],
     "difficulty": "middle",
     "type": "case",
     "prompt": "Представьте, что пользователи получают AI-отчет подготовки, но не переходят к mock-интервью. Какие гипотезы и эксперименты вы предложите?",
-    "signals": ["activation", "conversion", "user journey", "experimentation"]
+    "signals": ["activation", "conversion", "user journey", "experimentation"],
+    "rubric": ["ищет барьеры активации", "предлагает эксперименты", "задает метрики успеха"]
+  },
+  {
+    "id": "green_bank_ba_process_er_001",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["business_analysis", "banking", "database", "sql", "communication"],
+    "difficulty": "junior-middle",
+    "type": "system_analysis_case",
+    "prompt": "Смоделируйте непрофильный бизнес-процесс в BPMN, выделите сущности и атрибуты, затем переведите их в ER-модель данных.",
+    "signals": ["BPMN", "ER-модель", "сущности", "атрибуты", "системное мышление"],
+    "rubric": ["процесс имеет роли и события", "сущности связаны с процессом", "ER-модель отражает связи и ограничения"]
+  },
+  {
+    "id": "green_bank_credit_product_002",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["business_analysis", "banking", "product", "communication"],
+    "difficulty": "middle",
+    "type": "system_analysis_case",
+    "prompt": "Заказчик просит добавить новый кредитный продукт в систему заявок. Расскажите путь аналитика от бизнес-требования до выката в прод.",
+    "signals": ["сбор требований", "декомпозиция", "согласование", "тестирование", "release"],
+    "rubric": ["уточняет бизнес-цель", "разделяет требования", "описывает согласование и приемку"]
+  },
+  {
+    "id": "green_bank_requirements_003",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["business_analysis", "communication", "product"],
+    "difficulty": "junior-middle",
+    "type": "theory_case",
+    "prompt": "На примере фичи разделите требования на бизнес-, пользовательские, функциональные и нефункциональные. Какие критерии качества требований проверите?",
+    "signals": ["виды требований", "качество требований", "приемочные критерии"],
+    "rubric": ["различает уровни требований", "называет проверяемость и непротиворечивость", "дает пример acceptance criteria"]
+  },
+  {
+    "id": "green_bank_integration_004",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["business_analysis", "backend", "system_design", "banking"],
+    "difficulty": "middle",
+    "type": "integration_design",
+    "prompt": "Нужно спроектировать интеграцию двух систем. Какие данные, протоколы, ошибки, безопасность, мониторинг и нагрузку вы уточните перед решением?",
+    "signals": ["REST/SOAP/events", "контракты", "ошибки", "логирование", "безопасность"],
+    "rubric": ["уточняет источник и потребителя данных", "описывает контракт", "учитывает ошибки и мониторинг"]
+  },
+  {
+    "id": "green_bank_phone_book_005",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["business_analysis", "product", "communication"],
+    "difficulty": "junior-middle",
+    "type": "discovery_case",
+    "prompt": "К заказчику пришел запрос на цифровую телефонную книгу. Проведите интервью, структурируйте требования и покажите, как проверите реализацию.",
+    "signals": ["customer interview", "requirements", "acceptance", "user journey"],
+    "rubric": ["задает вопросы о пользователях", "фиксирует сценарии", "описывает приемку"]
+  },
+  {
+    "id": "green_bank_rest_api_invest_006",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["backend", "system_design", "banking", "product"],
+    "difficulty": "middle",
+    "type": "api_design",
+    "prompt": "Спроектируйте REST API для сервиса биржевых инвестиций: создать пользователя на бирже, получить пользователя, получить пользователя на конкретной бирже, выдать доступ к бирже.",
+    "signals": ["REST", "HTTP methods", "status codes", "resource design"],
+    "rubric": ["выделяет ресурсы", "подбирает методы и URL", "обрабатывает ошибки и статусы"]
+  },
+  {
+    "id": "green_bank_kafka_duplicates_007",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["backend", "system_design", "kafka", "banking"],
+    "difficulty": "middle",
+    "type": "backend_case",
+    "prompt": "В Kafka-потоке появляются дубликаты событий. Как вы будете устранять дубли и проектировать обработчик с учетом at-least-once/exactly-once?",
+    "signals": ["Kafka", "idempotency", "deduplication", "delivery semantics"],
+    "rubric": ["говорит про идемпотентность", "хранит ключи обработки", "понимает delivery semantics"]
+  },
+  {
+    "id": "green_bank_db_perf_008",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["database", "backend", "system_design", "sql"],
+    "difficulty": "middle",
+    "type": "debugging_case",
+    "prompt": "Приложение делает много запросов в БД и начало тормозить. Где искать проблему и какие данные собрать до оптимизации?",
+    "signals": ["metrics", "slow queries", "execution plan", "indexes"],
+    "rubric": ["смотрит метрики приложения", "ищет slow queries", "использует EXPLAIN/ANALYZE"]
+  },
+  {
+    "id": "green_bank_probes_009",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["backend", "devops", "system_design"],
+    "difficulty": "junior-middle",
+    "type": "theory_case",
+    "prompt": "Объясните разницу между liveness и readiness probes. Какие проверки вы положите в каждую для web-сервиса с БД?",
+    "signals": ["Kubernetes", "liveness", "readiness", "availability"],
+    "rubric": ["liveness проверяет жив ли процесс", "readiness проверяет готовность к трафику", "не кладет тяжелые проверки в liveness"]
+  },
+  {
+    "id": "green_bank_external_sort_010",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["algorithms", "backend", "systems"],
+    "difficulty": "middle",
+    "type": "algorithm_task",
+    "prompt": "Нужно отсортировать файл 2 GB при ограничении 1 GB оперативной памяти. Опишите алгоритм и оцените сложность.",
+    "signals": ["external sort", "chunks", "k-way merge", "memory limit"],
+    "rubric": ["делит на чанки", "сортирует чанки", "сливает k-way merge"]
+  },
+  {
+    "id": "green_bank_kth_from_end_011",
+    "company": "Сбер / Зеленый банк",
+    "source": "Зеленый банк.pdf",
+    "tags": ["algorithms", "backend", "go"],
+    "difficulty": "junior-middle",
+    "type": "coding_task",
+    "prompt": "Дан односвязный список. Напишите функцию, которая возвращает k-й элемент с конца за O(n) времени и O(1) памяти.",
+    "signals": ["linked list", "two pointers", "complexity"],
+    "rubric": ["использует два указателя", "обрабатывает k больше длины", "дает O(n)/O(1)"]
+  },
+  {
+    "id": "sber_frontend_accessibility_001",
+    "company": "Сбербанк",
+    "source": "Сбербанк.pdf",
+    "tags": ["frontend", "accessibility", "product"],
+    "difficulty": "junior-middle",
+    "type": "frontend_theory",
+    "prompt": "Зачем нужна семантическая HTML-разметка и как сделать интерфейс доступнее без полного знания screen reader-технологий?",
+    "signals": ["HTML5", "SEO", "screen reader", "ARIA", "roles"],
+    "rubric": ["говорит про семантику", "упоминает role/ARIA аккуратно", "думает о клавиатурной навигации"]
+  },
+  {
+    "id": "sber_frontend_perf_002",
+    "company": "Сбербанк",
+    "source": "Сбербанк.pdf",
+    "tags": ["frontend", "system_design", "performance"],
+    "difficulty": "middle",
+    "type": "frontend_case",
+    "prompt": "Страница загружается медленно. Какие способы оптимизации фронтенда вы предложите для картинок, шрифтов, JS/CSS и сетевых запросов?",
+    "signals": ["lazy-loading", "preload", "gzip", "webp", "bundle splitting"],
+    "rubric": ["разделяет сетевые и клиентские причины", "оптимизирует ассеты", "проверяет метрики"]
+  },
+  {
+    "id": "sber_frontend_tests_003",
+    "company": "Сбербанк",
+    "source": "Сбербанк.pdf",
+    "tags": ["frontend", "qa", "testing"],
+    "difficulty": "junior-middle",
+    "type": "testing_case",
+    "prompt": "Какие unit, snapshot и E2E-тесты вы бы написали для важной формы заявки? Где граница между ними?",
+    "signals": ["Jest", "TDD", "snapshot", "E2E", "test pyramid"],
+    "rubric": ["различает уровни тестов", "понимает стоимость E2E", "выбирает критичные сценарии"]
+  },
+  {
+    "id": "sber_frontend_ts_js_004",
+    "company": "Сбербанк",
+    "source": "Сбербанк.pdf",
+    "tags": ["frontend", "javascript", "typescript"],
+    "difficulty": "junior-middle",
+    "type": "frontend_theory",
+    "prompt": "В каких случаях вы выберете TypeScript вместо JavaScript для новой фичи, а когда оставите JS?",
+    "signals": ["TypeScript", "typing", "maintenance", "team workflow"],
+    "rubric": ["учитывает размер проекта", "говорит про поддержку", "не выбирает технологию ради технологии"]
+  },
+  {
+    "id": "ozon_memory_page_001",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["systems", "backend", "go"],
+    "difficulty": "middle",
+    "type": "systems_theory",
+    "prompt": "Что такое страница памяти, зачем нужны page table/TLB и когда могут понадобиться huge pages?",
+    "signals": ["virtual memory", "TLB", "huge pages", "performance"],
+    "rubric": ["объясняет виртуальную память", "упоминает TLB", "понимает trade-off huge pages"]
+  },
+  {
+    "id": "ozon_syscall_002",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["systems", "backend", "linux", "go"],
+    "difficulty": "junior-middle",
+    "type": "systems_theory",
+    "prompt": "Что такое системный вызов? Объясните переход user space -> kernel space на примерах read, fork или epoll.",
+    "signals": ["syscall", "kernel space", "user space", "epoll", "fork"],
+    "rubric": ["объясняет границу kernel/user", "приводит пример syscall", "понимает цену переключения"]
+  },
+  {
+    "id": "ozon_lru_cache_003",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["algorithms", "backend", "system_design", "cache"],
+    "difficulty": "middle",
+    "type": "coding_task",
+    "prompt": "Реализуйте LRU-cache фиксированного размера с операциями get/put за O(1). Какие структуры данных нужны?",
+    "signals": ["LRU", "hash map", "doubly linked list", "O(1)"],
+    "rubric": ["использует map + двусвязный список", "обновляет порядок при get", "удаляет самый старый элемент"]
+  },
+  {
+    "id": "ozon_chat_schema_004",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["database", "sql", "backend", "system_design"],
+    "difficulty": "middle",
+    "type": "database_design",
+    "prompt": "Есть пользователи, чаты и сообщения. Пользователь состоит в нескольких чатах, сообщение принадлежит одному чату и имеет автора. Спроектируйте таблицы и запрос для всех чатов пользователя.",
+    "signals": ["RDBMS", "many-to-many", "foreign keys", "indexes", "joins"],
+    "rubric": ["делает таблицу user_chats", "задает FK/PK", "пишет join-запрос"]
+  },
+  {
+    "id": "ozon_chat_scaling_005",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["database", "system_design", "backend"],
+    "difficulty": "middle-senior",
+    "type": "scaling_case",
+    "prompt": "В чатах быстро растет таблица messages и скоро не хватает диска. Какую таблицу шардировать, по какому ключу и какие риски появятся?",
+    "signals": ["sharding", "messages", "partitioning", "hot shards"],
+    "rubric": ["шардирует самые растущие данные", "выбирает ключ", "учитывает запросы и hot keys"]
+  },
+  {
+    "id": "ozon_transactions_006",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["database", "sql", "backend"],
+    "difficulty": "middle",
+    "type": "database_theory",
+    "prompt": "Что такое транзакция и какие аномалии возможны при параллельном выполнении? Назовите уровни изоляции в РСУБД.",
+    "signals": ["transactions", "isolation levels", "dirty read", "phantom read"],
+    "rubric": ["называет ACID", "знает Read Committed/Repeatable Read/Serializable", "объясняет аномалии"]
+  },
+  {
+    "id": "ozon_index_design_007",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["database", "sql", "performance"],
+    "difficulty": "middle",
+    "type": "sql_task",
+    "prompt": "Подберите индекс для запроса: SELECT * FROM employee WHERE sex='m' AND salary > 300000 AND age=20 ORDER BY created_at. Объясните порядок колонок.",
+    "signals": ["composite index", "filter", "range condition", "ORDER BY"],
+    "rubric": ["различает equality/range/order", "объясняет селективность", "проверяет план"]
+  },
+  {
+    "id": "ozon_constraints_008",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["database", "sql"],
+    "difficulty": "junior-middle",
+    "type": "database_theory",
+    "prompt": "Какие бывают ограничения в реляционных БД: CHECK, NOT NULL, UNIQUE, PRIMARY KEY, FOREIGN KEY? Что произойдет при нарушении?",
+    "signals": ["constraints", "rollback", "foreign key", "cascade", "restrict"],
+    "rubric": ["называет ограничения", "понимает rollback", "объясняет FK действия"]
+  },
+  {
+    "id": "ozon_library_schema_009",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["database", "sql", "backend"],
+    "difficulty": "middle",
+    "type": "database_design",
+    "prompt": "Спроектируйте модель библиотеки: автор, книга, читатель. Физическая книга одна и может быть на руках только у одного читателя. Напишите запросы для книг на руках, книг с >3 авторами и топ-3 читаемых авторов.",
+    "signals": ["database schema", "many-to-many", "joins", "group by", "limit"],
+    "rubric": ["учитывает несколько авторов", "моделирует выдачу книги", "пишет агрегирующие запросы"]
+  },
+  {
+    "id": "ozon_inmemory_cache_010",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["backend", "go", "cache", "system_design"],
+    "difficulty": "middle",
+    "type": "coding_task",
+    "prompt": "Напишите in-memory cache с интерфейсом Set/Get. Как сделать его потокобезопасным, когда нужен RWMutex, а когда шардирование?",
+    "signals": ["Go", "map", "sync.Mutex", "sync.RWMutex", "sharding"],
+    "rubric": ["инициализирует map", "защищает конкурентный доступ", "понимает lock contention"]
+  },
+  {
+    "id": "ozon_cache_pointer_bug_011",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["backend", "go", "debugging", "cache"],
+    "difficulty": "middle",
+    "type": "debugging_task",
+    "prompt": "Кеш должен разгрузить хранилище, но hit rate фактически нулевой: в Set кладут значение структуры, а в Get делают type assertion к указателю. Что не так и как исправить?",
+    "signals": ["Go", "type assertion", "pointer/value", "cache bug"],
+    "rubric": ["видит mismatch value vs pointer", "предлагает единый тип", "думает о тесте"]
+  },
+  {
+    "id": "ozon_merge_channels_012",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["backend", "go", "concurrency"],
+    "difficulty": "middle",
+    "type": "coding_task",
+    "prompt": "Напишите функцию merge(cs ...<-chan int) <-chan int, которая объединяет N входных каналов в один выходной и корректно закрывает его.",
+    "signals": ["Go", "channels", "WaitGroup", "close"],
+    "rubric": ["читает все входные каналы", "использует WaitGroup", "закрывает output после завершения"]
+  },
+  {
+    "id": "ozon_slice_remove_013",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["algorithms", "go", "backend"],
+    "difficulty": "junior-middle",
+    "type": "coding_task",
+    "prompt": "Дан слайс целых чисел. Напишите функцию remove, которая удаляет все нули без лишних аллокаций: [] -> [], [0] -> [], [1,0,0,2] -> [1,2].",
+    "signals": ["Go", "slice", "two pointers", "in-place"],
+    "rubric": ["решает in-place", "сохраняет порядок", "оценивает O(n)"]
+  },
+  {
+    "id": "ozon_zip_slices_014",
+    "company": "Ozon",
+    "source": "Озон.pdf",
+    "tags": ["algorithms", "go", "backend"],
+    "difficulty": "junior-middle",
+    "type": "coding_task",
+    "prompt": "Реализуйте zip для двух слайсов int: [1,2,3] и [4,5,6,7] -> [[1,4],[2,5],[3,6]]. Как обобщить на произвольное число слайсов?",
+    "signals": ["Go", "slices", "min length", "generalization"],
+    "rubric": ["берет min length", "не выходит за границы", "обобщает на variadic input"]
+  },
+  {
+    "id": "avito_recommend_filter_001",
+    "company": "Avito",
+    "source": "Aвито.pdf",
+    "tags": ["python", "algorithms", "backend", "marketplace"],
+    "difficulty": "junior-middle",
+    "type": "coding_task",
+    "prompt": "Есть список рекомендованных item_id и список уже просмотренных item_id. Верните рекомендации без просмотренных и оцените сложность решения.",
+    "signals": ["Python", "list", "set", "complexity", "recommendations"],
+    "rubric": ["преобразует seen в set", "сохраняет порядок рекомендаций", "дает O(n)"]
+  },
+  {
+    "id": "avito_user_storage_002",
+    "company": "Avito",
+    "source": "Aвито.pdf",
+    "tags": ["python", "backend", "testing", "oop", "marketplace"],
+    "difficulty": "junior-middle",
+    "type": "coding_task",
+    "prompt": "Спроектируйте классы User, PrivateUser и UserStorage: сохранение пользователя в файл, загрузка, __str__/__eq__, тесты и расширение до Postgres-хранилища.",
+    "signals": ["OOP", "magic methods", "with", "pytest", "mock", "inheritance"],
+    "rubric": ["корректно проектирует классы", "пишет тесты", "понимает абстракцию storage"]
+  },
+  {
+    "id": "avito_weather_highload_003",
+    "company": "Avito",
+    "source": "Aвито.pdf",
+    "tags": ["backend", "system_design", "cache", "ml", "marketplace"],
+    "difficulty": "middle",
+    "type": "backend_case",
+    "prompt": "Есть функция AI-прогноза погоды, которая работает 1 секунду, и RPC-ручка с нагрузкой 10k RPS. Как реализовать ручку, если появляется параметр cityId?",
+    "signals": ["highload", "cache", "timeouts", "stampede", "HTTP status codes"],
+    "rubric": ["не вызывает модель на каждый запрос", "проектирует кеш", "учитывает прогрев и протухание"]
+  },
+  {
+    "id": "avito_unpredictable_timeout_004",
+    "company": "Avito",
+    "source": "Aвито.pdf",
+    "tags": ["backend", "go", "systems", "system_design"],
+    "difficulty": "middle",
+    "type": "coding_task",
+    "prompt": "Есть функция unpredictableFunc, которая может работать неопределенно долго и ее нельзя менять. Напишите обертку с фиксированным таймаутом и обсудите graceful shutdown.",
+    "signals": ["Go", "timeout", "context", "goroutine", "graceful shutdown"],
+    "rubric": ["использует context/select", "не блокируется навсегда", "понимает сигналы завершения"]
+  },
+  {
+    "id": "avito_go_concurrency_005",
+    "company": "Avito",
+    "source": "Aвито.pdf",
+    "tags": ["backend", "go", "concurrency", "systems"],
+    "difficulty": "middle",
+    "type": "theory_case",
+    "prompt": "Объясните горутины, runtime Go, каналы и примитивы синхронизации. Какие проблемы бывают: deadlock, race condition, утечки горутин?",
+    "signals": ["Go runtime", "goroutines", "channels", "Mutex", "race"],
+    "rubric": ["различает горутины и потоки", "знает каналы и mutex", "понимает race/deadlock"]
+  },
+  {
+    "id": "tbank_sql_engine_001",
+    "company": "Т-Банк",
+    "source": "SQL Т-банк.pdf",
+    "tags": ["sql", "database", "backend"],
+    "difficulty": "junior-middle",
+    "type": "database_theory",
+    "prompt": "Назовите основные менеджеры storage engine в СУБД и опишите общий путь SQL-запроса от парсинга до возврата результата.",
+    "signals": ["Storage Engine", "Buffer Manager", "Query Processor", "Parsing", "Execution"],
+    "rubric": ["называет ключевые менеджеры", "понимает query pipeline", "разделяет storage и query processor"]
+  },
+  {
+    "id": "tbank_sql_scd_002",
+    "company": "Т-Банк",
+    "source": "SQL Т-банк.pdf",
+    "tags": ["sql", "database", "analytics", "scd", "cdc"],
+    "difficulty": "middle",
+    "type": "data_warehouse_theory",
+    "prompt": "Объясните SCD 0/1/2/3/4 и CDC. Когда выбрать SCD Type 2, какие поля добавить и какие трудности появятся?",
+    "signals": ["SCD", "CDC", "data warehouse", "history", "versioning"],
+    "rubric": ["различает типы SCD", "называет start/end date", "учитывает рост объема и сложность"]
+  },
+  {
+    "id": "tbank_sql_self_join_003",
+    "company": "Т-Банк",
+    "source": "SQL Т-банк.pdf",
+    "tags": ["sql", "database", "analytics"],
+    "difficulty": "junior-middle",
+    "type": "sql_task",
+    "prompt": "Есть employees(employee_id, name, salary, manager_id). Напишите запросы: число сотрудников с salary > 5000 и менеджером; имена сотрудников вместе с именами менеджеров.",
+    "signals": ["SQL", "self join", "count", "manager_id"],
+    "rubric": ["фильтрует manager_id IS NOT NULL", "делает self join", "аккуратно задает алиасы"]
+  },
+  {
+    "id": "tbank_sql_group_having_004",
+    "company": "Т-Банк",
+    "source": "SQL Т-банк.pdf",
+    "tags": ["sql", "database", "analytics"],
+    "difficulty": "junior-middle",
+    "type": "sql_task",
+    "prompt": "Напишите SQL для клиентов и количества их заказов, оставив только тех, кто сделал больше 5 заказов. Объясните, чем WHERE отличается от HAVING.",
+    "signals": ["JOIN", "GROUP BY", "HAVING", "aggregation"],
+    "rubric": ["группирует по клиенту", "использует HAVING", "понимает порядок выполнения"]
+  },
+  {
+    "id": "tbank_sql_keys_005",
+    "company": "Т-Банк",
+    "source": "SQL Т-банк.pdf",
+    "tags": ["sql", "database"],
+    "difficulty": "junior-middle",
+    "type": "database_theory",
+    "prompt": "Какие ключи бывают в SQL: primary, foreign, candidate, surrogate, natural, alternate? Чем суррогатный ключ отличается от естественного?",
+    "signals": ["primary key", "foreign key", "surrogate key", "candidate key"],
+    "rubric": ["называет виды ключей", "понимает бизнес-смысл natural key", "объясняет FK"]
+  },
+  {
+    "id": "tbank_logic_poison_001",
+    "company": "Т-Банк",
+    "source": "Задачи Т-банка.pdf",
+    "tags": ["algorithms", "statistics", "logic", "banking"],
+    "difficulty": "middle",
+    "type": "logic_task",
+    "prompt": "Есть 3 крысы и n пробирок, в одной яд. За один эксперимент нужно точно определить ядовитую пробирку, смешивая жидкости в поилках крыс. Какое максимальное n и почему?",
+    "signals": ["binary encoding", "combinatorics", "experiments"],
+    "rubric": ["кодирует пробирки битами", "получает 2^3 вариантов", "объясняет результат наблюдений"]
+  },
+  {
+    "id": "tbank_logic_races_002",
+    "company": "Т-Банк",
+    "source": "Задачи Т-банка.pdf",
+    "tags": ["algorithms", "logic", "optimization", "banking"],
+    "difficulty": "middle",
+    "type": "logic_task",
+    "prompt": "Есть 25 участников, в одном забеге максимум 5. Нужно определить топ-3 самых быстрых без секундомера. Какое минимальное число забегов?",
+    "signals": ["tournament", "elimination", "optimization"],
+    "rubric": ["делит на группы по 5", "устраивает финал победителей", "сужает кандидатов на 2-3 место"]
+  },
+  {
+    "id": "tbank_logic_bridge_003",
+    "company": "Т-Банк",
+    "source": "Задачи Т-банка.pdf",
+    "tags": ["algorithms", "logic", "optimization"],
+    "difficulty": "junior-middle",
+    "type": "logic_task",
+    "prompt": "Четыре человека переходят мост с фонарем за 1, 10, 20 и 25 минут. На мосту максимум двое. Найдите минимальное время и стратегию переходов.",
+    "signals": ["optimization", "greedy reasoning", "bridge puzzle"],
+    "rubric": ["использует быстрых как переносчиков фонаря", "сравнивает стратегии", "считает итоговое время"]
+  },
+  {
+    "id": "tbank_logic_lamps_004",
+    "company": "Т-Банк",
+    "source": "Задачи Т-банка.pdf",
+    "tags": ["algorithms", "math", "logic"],
+    "difficulty": "junior-middle",
+    "type": "logic_task",
+    "prompt": "100 ламп выключены. Первый человек переключает каждую лампу, второй - каждую вторую, ..., сотый - сотую. Какие лампы будут включены в конце?",
+    "signals": ["divisors", "perfect squares", "number theory"],
+    "rubric": ["связывает переключения с делителями", "понимает нечетное число делителей", "называет квадраты"]
+  },
+  {
+    "id": "tbank_probability_boxes_005",
+    "company": "Т-Банк",
+    "source": "Задачи Т-банка.pdf",
+    "tags": ["statistics", "probability", "logic", "analytics"],
+    "difficulty": "middle",
+    "type": "probability_task",
+    "prompt": "Есть несколько коробок с разным числом белых и черных шаров. Из случайной коробки достали белый шар. Как найти вероятность, что следующий шар из той же коробки тоже белый?",
+    "signals": ["Bayes", "conditional probability", "posterior"],
+    "rubric": ["обновляет вероятности коробок", "считает условную вероятность", "не усредняет наивно"]
+  },
+  {
+    "id": "tbank_probability_coin_006",
+    "company": "Т-Банк",
+    "source": "Задачи Т-банка.pdf",
+    "tags": ["statistics", "probability", "logic"],
+    "difficulty": "middle",
+    "type": "probability_task",
+    "prompt": "Бросают монету до появления одной из последовательностей: ОР у первого игрока или РР у второго. Найдите вероятность победы первого.",
+    "signals": ["Markov states", "conditional probability", "sequence game"],
+    "rubric": ["задает состояния по последнему броску", "составляет уравнения", "получает вероятность"]
   }
 ]
