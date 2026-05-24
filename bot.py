@@ -15,7 +15,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
-BOT_VERSION = "gate3-dz4-v1.2"
+BOT_VERSION = "gate3-dz4-v1.3"
 TRIAL_QUESTION_LIMIT = 5
 RESUME_PREVIEW_LIMIT = 120
 UNLIMITED_TELEGRAM_IDS = {
@@ -167,6 +167,7 @@ def clear_current_flow(session):
         "mock_index",
         "answer_scores",
         "pending_resume_name",
+        "pending_update_resume_index",
         "position_profile",
     ):
         session.pop(key, None)
@@ -178,10 +179,38 @@ def infer_resume_name(session):
     return f"Резюме {len(get_resumes(session)) + 1}"
 
 
+def normalize_resume_name(name):
+    return re.sub(r"\s+", " ", name.strip()).casefold()
+
+
+def find_resume_by_name(session, name):
+    target = normalize_resume_name(name)
+    for index, resume in enumerate(get_resumes(session)):
+        if normalize_resume_name(resume.get("name", "")) == target:
+            return index, resume
+    return None, None
+
+
+def update_resume(session, index, text, name=None):
+    resumes = get_resumes(session)
+    if index < 0 or index >= len(resumes):
+        return None
+    if name is not None:
+        resumes[index]["name"] = name.strip()[:80] or resumes[index]["name"]
+    resumes[index]["text"] = text.strip()
+    session["active_resume_index"] = index
+    session["resume"] = resumes[index]["text"]
+    return resumes[index]
+
+
 def save_resume(session, text, name=None):
     body = text.strip()
+    resume_name = (name or infer_resume_name(session)).strip()[:80]
+    existing_index, existing_resume = find_resume_by_name(session, resume_name)
+    if existing_resume:
+        return update_resume(session, existing_index, body)
     entry = {
-        "name": (name or infer_resume_name(session)).strip()[:80],
+        "name": resume_name,
         "text": body,
     }
     get_resumes(session).append(entry)
@@ -975,6 +1004,7 @@ def render_resumes(session):
         )
     lines.append(
         "\nВыбрать активное: <code>/use_resume 2</code>\n"
+        "Обновить резюме: <code>/update_resume 2</code>\n"
         "Добавить новое: /add_resume\n"
         "Разобрать вакансию под активное резюме: /start"
     )
@@ -1032,6 +1062,7 @@ def render_help():
         "/add_resume - добавить резюме в библиотеку\n"
         "/resumes - посмотреть резюме и активное резюме\n"
         "/use_resume 2 - выбрать активное резюме\n"
+        "/update_resume 2 - обновить текст резюме\n"
         "/position - получить вопросы по позиции и грейду\n"
         "/questions - показать вероятные вопросы\n"
         "/mock - начать тренировочный вопрос\n"
@@ -1081,7 +1112,8 @@ def render_tests():
         "<b>1. Целевой</b>\n"
         "Команда /demo -> /questions -> /mock. Ожидается readiness report, вопросы из банка и оценка ответа.\n\n"
         "<b>2. Несколько резюме</b>\n"
-        "Команды /add_resume -> /resumes -> /use_resume 1 -> /start. Ожидается выбор активного резюме под вакансию.\n\n"
+        "Команды /add_resume -> /resumes -> /update_resume 1 -> /use_resume 1 -> /start. "
+        "Ожидается обновление и выбор активного резюме под вакансию.\n\n"
         "<b>3. Позиция и грейд</b>\n"
         "Команда /position и сообщение с ролью, например Senior product analyst. Ожидаются вопросы по роли без резюме.\n\n"
         "<b>4. Граничный</b>\n"
@@ -1220,9 +1252,40 @@ def handle_message(chat_id, text):
     if command == "/add_resume":
         session["state"] = "waiting_resume_name"
         session.pop("pending_resume_name", None)
+        session.pop("pending_update_resume_index", None)
         send_message(
             chat_id,
             "Как назвать резюме? Например: <b>ML PM</b>, <b>Data Analyst</b> или <b>Backend Go</b>.",
+            keyboard=MAIN_KEYBOARD,
+        )
+        return
+
+    if command.startswith("/update_resume"):
+        parts = command.split()
+        if len(parts) < 2:
+            send_message(
+                chat_id,
+                render_resumes(session)
+                + "\n\nЧтобы обновить текст резюме, напиши команду с номером: <code>/update_resume 2</code>.",
+                keyboard=MAIN_KEYBOARD,
+            )
+            return
+        try:
+            resume_index = int(parts[1]) - 1
+        except ValueError:
+            send_message(chat_id, "Укажи номер резюме, например: <code>/update_resume 2</code>.", keyboard=MAIN_KEYBOARD)
+            return
+        resumes = get_resumes(session)
+        if resume_index < 0 or resume_index >= len(resumes):
+            send_message(chat_id, "Не нашел резюме с таким номером. Проверь список через /resumes.", keyboard=MAIN_KEYBOARD)
+            return
+        session["state"] = "waiting_update_resume_text"
+        session["pending_update_resume_index"] = resume_index
+        session["pending_resume_name"] = resumes[resume_index]["name"]
+        send_message(
+            chat_id,
+            f"Обновляем резюме <b>{html.escape(resumes[resume_index]['name'])}</b>.\n\n"
+            "Пришли новый полный текст резюме одним сообщением.",
             keyboard=MAIN_KEYBOARD,
         )
         return
@@ -1371,12 +1434,68 @@ def handle_message(chat_id, text):
         return
 
     if session.get("state") == "waiting_resume_name":
-        session["pending_resume_name"] = raw_text[:80] or infer_resume_name(session)
+        resume_name = raw_text[:80] or infer_resume_name(session)
+        duplicate_index, duplicate_resume = find_resume_by_name(session, resume_name)
+        if duplicate_resume:
+            session["state"] = "confirm_resume_update"
+            session["pending_update_resume_index"] = duplicate_index
+            session["pending_resume_name"] = duplicate_resume["name"]
+            send_message(
+                chat_id,
+                f"Резюме с названием <b>{html.escape(duplicate_resume['name'])}</b> уже есть.\n\n"
+                "Хочешь обновить его текст? Напиши <b>да</b> или <b>нет</b>.",
+                keyboard=MAIN_KEYBOARD,
+            )
+            return
+        session["pending_resume_name"] = resume_name
         session["state"] = "waiting_new_resume_text"
         send_message(
             chat_id,
             f"Название сохранено: <b>{html.escape(session['pending_resume_name'])}</b>.\n\n"
             "Теперь пришли текст резюме одним сообщением.",
+            keyboard=MAIN_KEYBOARD,
+        )
+        return
+
+    if session.get("state") == "confirm_resume_update":
+        if command in {"да", "yes", "y", "обновить"}:
+            index = session.get("pending_update_resume_index")
+            resumes = get_resumes(session)
+            if not isinstance(index, int) or index < 0 or index >= len(resumes):
+                clear_current_flow(session)
+                send_message(chat_id, "Не нашел это резюме. Проверь список через /resumes.", keyboard=MAIN_KEYBOARD)
+                return
+            session["state"] = "waiting_update_resume_text"
+            send_message(
+                chat_id,
+                f"Хорошо, обновляем <b>{html.escape(resumes[index]['name'])}</b>.\n\n"
+                "Пришли новый полный текст резюме одним сообщением.",
+                keyboard=MAIN_KEYBOARD,
+            )
+            return
+        if command in {"нет", "no", "n", "не"}:
+            session["state"] = "waiting_resume_name"
+            session.pop("pending_update_resume_index", None)
+            session.pop("pending_resume_name", None)
+            send_message(chat_id, "Ок, тогда пришли другое название для нового резюме.", keyboard=MAIN_KEYBOARD)
+            return
+        send_message(chat_id, "Напиши <b>да</b>, если хочешь обновить резюме, или <b>нет</b>, чтобы выбрать другое название.", keyboard=MAIN_KEYBOARD)
+        return
+
+    if session.get("state") == "waiting_update_resume_text":
+        index = session.get("pending_update_resume_index")
+        resumes = get_resumes(session)
+        if not isinstance(index, int) or index < 0 or index >= len(resumes):
+            clear_current_flow(session)
+            send_message(chat_id, "Не нашел это резюме. Проверь список через /resumes.", keyboard=MAIN_KEYBOARD)
+            return
+        entry = update_resume(session, index, raw_text)
+        clear_current_flow(session)
+        sync_active_resume(session)
+        send_message(
+            chat_id,
+            f"Обновил резюме <b>{html.escape(entry['name'])}</b> и сделал его активным.\n\n"
+            "Теперь можно написать /start и прислать вакансию под обновленное резюме.",
             keyboard=MAIN_KEYBOARD,
         )
         return

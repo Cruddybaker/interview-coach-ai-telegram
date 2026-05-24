@@ -107,6 +107,18 @@ def main():
         resume_library_chat_id,
         "4 года backend: Go, PostgreSQL, Kafka, кеши, highload, микросервисы.",
     )
+    bot.handle_message(resume_library_chat_id, "/add_resume")
+    bot.handle_message(resume_library_chat_id, "ml product manager")
+    bot.handle_message(resume_library_chat_id, "да")
+    bot.handle_message(
+        resume_library_chat_id,
+        "4 года в AI-продуктах: LLM, RAG, custdev, roadmap, SQL, метрики качества модели, запуск MVP.",
+    )
+    bot.handle_message(resume_library_chat_id, "/update_resume 2")
+    bot.handle_message(
+        resume_library_chat_id,
+        "5 лет backend: Go, PostgreSQL, Kafka, Redis, highload, микросервисы, observability.",
+    )
     bot.handle_message(resume_library_chat_id, "/resumes")
     bot.handle_message(resume_library_chat_id, "/use_resume 1")
     bot.handle_message(resume_library_chat_id, "/start")
@@ -118,9 +130,14 @@ def main():
         message["text"] for message in messages if message["chat_id"] == resume_library_chat_id
     )
     assert "Мои резюме" in resume_library_text
+    assert "уже есть" in resume_library_text
+    assert "Обновил резюме <b>ML Product Manager</b>" in resume_library_text
+    assert "Обновил резюме <b>Backend Go</b>" in resume_library_text
     assert "Активное резюме: <b>ML Product Manager</b>" in resume_library_text
+    assert len(bot.sessions[resume_library_chat_id]["resumes"]) == 2
     assert bot.sessions[resume_library_chat_id]["analysis"]
-    assert "LLM" in bot.sessions[resume_library_chat_id]["resume"]
+    assert "запуск MVP" in bot.sessions[resume_library_chat_id]["resume"]
+    assert "observability" in bot.sessions[resume_library_chat_id]["resumes"][1]["text"]
 
     position_chat_id = 2002
     bot.UNLIMITED_TELEGRAM_IDS.add(str(position_chat_id))
@@ -163,6 +180,7 @@ def main():
     print("Trial lock scenario: passed")
     print("Unlimited admin scenario: passed")
     print("Resume library scenario: passed")
+    print("Resume duplicate/update scenario: passed")
     print("Position and grade scenario: passed")
     print("\nTranscript preview:")
     for message in messages[:8]:
