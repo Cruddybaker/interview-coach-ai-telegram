@@ -41,9 +41,11 @@ def main():
     full_text = "\n".join(message["text"] for message in messages)
     assert "Инструкция для ДЗ 4 / Gate 3" in full_text
     assert "Диагностика готовности" in full_text
-    assert "Вероятные вопросы" in full_text
+    assert "5 примерных вопросов" in full_text
     assert "Тренировочный вопрос" in full_text
-    assert "Оценка ответа" in full_text
+    assert "Общая оценка" in full_text
+    assert "Направление для прокачки" in full_text
+    assert "Пакет дополнительных тренировок" in full_text
     assert "Safety-проверки" in full_text
     assert "Проверенные сценарии для ДЗ 4" in full_text
     assert "Краткий отчет для сдачи" in full_text
@@ -51,6 +53,7 @@ def main():
     analysis = bot.sessions[chat_id]["analysis"]
     assert 0 <= analysis["readiness"] <= 100
     assert analysis["questions"]
+    assert len(analysis["questions"]) == 5
     assert analysis["source"] == "heuristic"
     assert analysis["bank_matches"]
 

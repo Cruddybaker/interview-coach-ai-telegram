@@ -311,7 +311,7 @@ def clean_questions(value, fallback):
                     "rationale": rationale[:240] or "Вопрос связан с требованиями вакансии и опытом кандидата.",
                 }
             )
-    return questions[:8] or fallback
+    return questions[:5] or fallback[:5]
 
 
 def heuristic_analyze(resume, job):
@@ -393,6 +393,7 @@ def llm_analyze(resume, job, baseline):
         '  "gaps": ["до 7 коротких слабых мест"],\n'
         '  "questions": [{"title": "вопрос", "rationale": "почему этот вопрос вероятен"}]\n'
         "}\n\n"
+        "Верни ровно 5 примерных вопросов по вакансии. Не больше.\n\n"
         f"Baseline heuristic JSON, можно уточнить, но не игнорировать полностью:\n{json.dumps(baseline, ensure_ascii=False)}\n\n"
         f"Релевантные элементы банка вопросов:\n{json.dumps(bank_context, ensure_ascii=False)}\n\n"
         f"Резюме:\n{resume[:6000]}\n\n"
@@ -459,7 +460,39 @@ def build_questions(required_skills, resume_skills, missing_skills, bank_items=N
             "rationale": "Проверка зрелости и работы с неопределенностью.",
         },
     ]
-    return questions[:8]
+    return questions[:5]
+
+
+def readiness_label(score):
+    if score >= 72:
+        return "в целом готов к интервью"
+    if score >= 50:
+        return "есть база, но нужно усилить подачу"
+    return "пока рискованно идти без подготовки"
+
+
+def render_training_direction(analysis, advice):
+    focus = html.escape(str(analysis.get("focus", "структура ответа")))
+    gaps = analysis.get("gaps") or []
+    gap_text = html.escape(gaps[0]) if gaps else "добавить больше конкретики, метрик и примеров из опыта"
+    advice_text = advice[:2] if advice else ["Соберите 2-3 истории по STAR и потренируйте ответы вслух."]
+    safety_advice = next((item for item in advice if "опыт" in item.lower() and item not in advice_text), None)
+    if safety_advice:
+        advice_text.append(safety_advice)
+    return (
+        f"<b>Направление для прокачки</b>\n"
+        f"Главный фокус: <b>{focus}</b>.\n"
+        f"Что усилить перед интервью: {gap_text}\n"
+        f"{fmt_list(advice_text)}"
+    )
+
+
+def render_more_questions_cta():
+    return (
+        "<b>Нужны еще вопросы?</b>\n"
+        "Пакет дополнительных тренировок под конкретную компанию и роль уже в разработке. "
+        "Оплату пока не подключили, поэтому сейчас можно продолжить с текущими 5 вопросами через /mock."
+    )
 
 
 def heuristic_score_answer(answer, analysis):
@@ -555,7 +588,6 @@ def fmt_list(items):
 
 
 def render_report(analysis):
-    mode = "OpenAI LLM" if analysis.get("source") == "openai" else "эвристический fallback"
     bank_count = len(analysis.get("bank_matches", []))
     return (
         f"<b>Диагностика готовности</b>\n\n"
@@ -564,20 +596,21 @@ def render_report(analysis):
         f"Риск: <b>{html.escape(analysis['risk'])}</b>\n"
         f"Фокус подготовки: <b>{html.escape(analysis['focus'])}</b>\n\n"
         f"<b>Слабые места</b>\n{fmt_list(analysis['gaps'])}\n\n"
-        f"Режим: {html.escape(mode)}\n\n"
         f"Банк вопросов: подобрано <b>{bank_count}</b> релевантных кейсов\n\n"
-        f"Напиши /questions, чтобы увидеть вероятные вопросы, или /mock, чтобы начать тренировку."
+        f"Я подготовил <b>5 примерных вопросов</b> по этой вакансии. "
+        f"Напиши /questions, чтобы посмотреть список, или /mock, чтобы начать тренировку."
     )
 
 
 def render_questions(analysis):
-    lines = ["<b>Вероятные вопросы</b>"]
-    for index, question in enumerate(analysis["questions"], 1):
+    lines = ["<b>5 примерных вопросов по вакансии</b>"]
+    for index, question in enumerate(analysis["questions"][:5], 1):
         lines.append(
             f"\n<b>{index}. {html.escape(question['title'])}</b>\n"
             f"{html.escape(question['rationale'])}"
         )
     lines.append("\nНапиши /mock, чтобы ответить на первый вопрос.")
+    lines.append("\n" + render_more_questions_cta())
     return "\n".join(lines)
 
 
@@ -700,9 +733,8 @@ def handle_message(chat_id, text):
         send_message(
             chat_id,
             "Привет. Я ИИ-тренер интервью.\n\nПришли резюме текстом, а следующим сообщением - вакансию. "
-            "Я соберу оценку готовности, слабые места и вопросы для тренировочного интервью.\n\n"
-            "Если на сервере задан OPENAI_API_KEY, резюме, вакансия и mock-ответы будут отправлены в OpenAI API "
-            "для генерации вопросов и фидбека. Без ключа включится локальный fallback.",
+            "Я оценю готовность, найду слабые места и подберу 5 примерных вопросов, похожих на реальные задачи "
+            "для этой роли.\n\nПосле тренировочного ответа дам общую оценку и направление, что прокачать перед интервью.",
             keyboard=MAIN_KEYBOARD,
         )
         return
@@ -803,9 +835,11 @@ def handle_message(chat_id, text):
         session["state"] = "idle"
         send_message(
             chat_id,
-            f"<b>Оценка ответа: {score}/100 - {html.escape(verdict)}</b>\n\n"
-            f"{fmt_list(advice)}\n\n"
-            f"Напиши /mock, чтобы получить следующий вопрос.",
+            f"<b>Общая оценка: {score}/100 - {html.escape(verdict)}</b>\n"
+            f"Готовность: <b>{html.escape(readiness_label(score))}</b>\n\n"
+            f"{render_training_direction(analysis, advice)}\n\n"
+            f"{render_more_questions_cta()}\n\n"
+            f"Напиши /mock, чтобы ответить на следующий вопрос из текущего набора.",
             keyboard=MAIN_KEYBOARD,
         )
         return
