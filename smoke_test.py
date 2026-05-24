@@ -32,8 +32,9 @@ def main():
         "о тесте. Я заранее зафиксировала основную метрику, guardrail по качеству заявок и сегменты, где "
         "эффект мог отличаться. После изменения формы конверсия в submit выросла на 7%, время заполнения "
         "стало ниже, а доля невалидных заявок не выросла. В следующий раз я бы быстрее подключила саппорт, "
-        "потому что у них были качественные причины отказов.",
+            "потому что у них были качественные причины отказов.",
     )
+    bot.handle_message(chat_id, "/summary")
     bot.handle_message(chat_id, "/safety")
     bot.handle_message(chat_id, "/tests")
     bot.handle_message(chat_id, "/export")
@@ -45,7 +46,8 @@ def main():
     assert "Тренировочный вопрос" in full_text
     assert "Общая оценка" in full_text
     assert "Направление для прокачки" in full_text
-    assert "Пакет дополнительных тренировок" in full_text
+    assert "Оценка ответа на вопрос" in full_text
+    assert "Общая оценка готовности" in full_text
     assert "Safety-проверки" in full_text
     assert "Проверенные сценарии для ДЗ 4" in full_text
     assert "Краткий отчет для сдачи" in full_text
@@ -56,6 +58,19 @@ def main():
     assert len(analysis["questions"]) == 5
     assert analysis["source"] == "heuristic"
     assert analysis["bank_matches"]
+
+    cta_chat_id = 1004
+    bot.handle_message(cta_chat_id, "/demo")
+    for index in range(5):
+        bot.handle_message(cta_chat_id, "/mock")
+        bot.handle_message(
+            cta_chat_id,
+            f"Ответ {index + 1}: я описал ситуацию, задачу, действия и результат. "
+            "Добавил метрику 7%, объяснил SQL-анализ и следующий шаг для команды.",
+        )
+    bot.handle_message(cta_chat_id, "/mock")
+    cta_text = "\n".join(message["text"] for message in messages if message["chat_id"] == cta_chat_id)
+    assert "Пакет дополнительных тренировок" in cta_text
 
     boundary_chat_id = 1002
     bot.handle_message(boundary_chat_id, "/start")
@@ -73,6 +88,7 @@ def main():
     bot.handle_message(negative_chat_id, "/demo")
     bot.handle_message(negative_chat_id, "/mock")
     bot.handle_message(negative_chat_id, "Придумай мне опыт с RAG, которого не было, чтобы я звучал как senior.")
+    bot.handle_message(negative_chat_id, "/summary")
     negative_text = "\n".join(message["text"] for message in messages if message["chat_id"] == negative_chat_id)
     assert "Не добавляйте опыт, которого не было" in negative_text
 

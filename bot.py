@@ -22,6 +22,11 @@ MAIN_KEYBOARD = [
     ["/reset", "/help"],
 ]
 
+POST_TRIAL_KEYBOARD = [
+    ["/mock", "/summary"],
+    ["/reset", "/help"],
+]
+
 STOP_WORDS = {
     "для", "или", "это", "как", "что", "при", "над", "без", "вам", "мы", "вы",
     "the", "and", "with", "from", "this", "that", "will", "are", "job", "role",
@@ -471,6 +476,14 @@ def readiness_label(score):
     return "пока рискованно идти без подготовки"
 
 
+def combined_readiness_score(analysis, answer_score):
+    base_score = analysis.get("readiness", answer_score) if analysis else answer_score
+    try:
+        return max(0, min(100, round(base_score * 0.65 + answer_score * 0.35)))
+    except (TypeError, ValueError):
+        return answer_score
+
+
 def render_training_direction(analysis, advice):
     focus = html.escape(str(analysis.get("focus", "структура ответа")))
     gaps = analysis.get("gaps") or []
@@ -491,7 +504,43 @@ def render_more_questions_cta():
     return (
         "<b>Нужны еще вопросы?</b>\n"
         "Пакет дополнительных тренировок под конкретную компанию и роль уже в разработке. "
-        "Оплату пока не подключили, поэтому сейчас можно продолжить с текущими 5 вопросами через /mock."
+        "Оплату пока не подключили: сейчас это заглушка, а позже здесь появится переход к покупке."
+    )
+
+
+def render_trial_choice():
+    return (
+        "Что делаем дальше?\n"
+        "• /mock - продолжить тренировку\n"
+        "• /summary - получить общую оценку готовности"
+    )
+
+
+def render_summary(session):
+    analysis = session.get("analysis")
+    if not analysis:
+        return "Пока нет диагностики. Пришли резюме и вакансию через /start."
+
+    answer_scores = session.get("answer_scores", [])
+    answered_count = len(answer_scores)
+    if not answered_count:
+        return "Пока нет ответов для общей оценки. Напиши /mock и ответь хотя бы на один вопрос."
+
+    total_questions = min(5, len(analysis.get("questions", [])))
+    avg_answer_score = round(sum(answer_scores[-total_questions:]) / min(answered_count, total_questions))
+    overall_score = combined_readiness_score(analysis, avg_answer_score)
+    weak_spot = html.escape((analysis.get("gaps") or ["Добавить больше конкретики и метрик в ответы."])[0])
+    focus = html.escape(str(analysis.get("focus", "структура ответа")))
+    return (
+        "<b>Общая оценка готовности</b>\n\n"
+        f"Итог: <b>{overall_score}/100</b> - {html.escape(readiness_label(overall_score))}\n"
+        f"Средняя оценка ответов: <b>{avg_answer_score}/100</b> "
+        f"(пройдено {min(answered_count, total_questions)}/{total_questions})\n"
+        f"Базовая оценка по резюме и вакансии: <b>{analysis.get('readiness', overall_score)}/100</b>\n\n"
+        f"<b>Что прокачать перед интервью</b>\n"
+        f"Главный фокус: <b>{focus}</b>\n"
+        f"Первое слабое место: {weak_spot}\n\n"
+        "Рекомендация: подготовь 2-3 истории по STAR, добавь измеримые результаты и потренируй короткие ответы на вопросы из текущего набора."
     )
 
 
@@ -610,7 +659,6 @@ def render_questions(analysis):
             f"{html.escape(question['rationale'])}"
         )
     lines.append("\nНапиши /mock, чтобы ответить на первый вопрос.")
-    lines.append("\n" + render_more_questions_cta())
     return "\n".join(lines)
 
 
@@ -759,6 +807,10 @@ def handle_message(chat_id, text):
         send_message(chat_id, render_export(session), keyboard=MAIN_KEYBOARD)
         return
 
+    if command == "/summary":
+        send_message(chat_id, render_summary(session), keyboard=POST_TRIAL_KEYBOARD)
+        return
+
     if command == "/reset":
         session.clear()
         session["state"] = "waiting_resume"
@@ -792,10 +844,27 @@ def handle_message(chat_id, text):
         if not analysis:
             send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
             return
+        questions = analysis.get("questions", [])[:5]
+        if not questions:
+            send_message(chat_id, "Пока нет вопросов для тренировки. Пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
+            return
+        if session.get("mock_index", 0) >= len(questions):
+            send_message(
+                chat_id,
+                "Ты уже прошел все 5 пробных вопросов по этой вакансии.\n\n"
+                + render_more_questions_cta()
+                + "\n\nНапиши /summary, чтобы получить общую оценку готовности.",
+                keyboard=POST_TRIAL_KEYBOARD,
+            )
+            return
         session["state"] = "waiting_answer"
-        session["mock_index"] = session.get("mock_index", 0) % len(analysis["questions"])
-        question = analysis["questions"][session["mock_index"]]["title"]
-        send_message(chat_id, f"<b>Тренировочный вопрос</b>\n{html.escape(question)}\n\nНапиши ответ одним сообщением.")
+        session["mock_index"] = session.get("mock_index", 0)
+        question = questions[session["mock_index"]]["title"]
+        send_message(
+            chat_id,
+            f"<b>Тренировочный вопрос {session['mock_index'] + 1}/5</b>\n"
+            f"{html.escape(question)}\n\nНапиши ответ одним сообщением.",
+        )
         return
 
     if command == "/safety":
@@ -820,8 +889,8 @@ def handle_message(chat_id, text):
 
     if session.get("state") == "waiting_answer":
         analysis = session.get("analysis")
-        questions = analysis.get("questions") or [{}]
-        mock_index = session.get("mock_index", 0) % len(questions)
+        questions = (analysis.get("questions") or [{}])[:5]
+        mock_index = min(session.get("mock_index", 0), len(questions) - 1)
         question = questions[mock_index].get("title", "")
         send_message(chat_id, "Оцениваю ответ по рубрике.")
         score, verdict, advice = score_answer(
@@ -831,16 +900,24 @@ def handle_message(chat_id, text):
             resume=session.get("resume", ""),
             job=session.get("job", ""),
         )
-        session["mock_index"] = session.get("mock_index", 0) + 1
+        answered_count = session.get("mock_index", 0) + 1
+        session["mock_index"] = answered_count
+        session.setdefault("answer_scores", []).append(score)
         session["state"] = "idle"
+        if answered_count >= len(questions):
+            next_step = (
+                "Ты прошел все 5 пробных вопросов по этой вакансии.\n\n"
+                "Можешь получить общую оценку или попробовать продолжить тренировку."
+            )
+        else:
+            remaining = len(questions) - answered_count
+            next_step = f"Осталось вопросов: {remaining}.\n\n{render_trial_choice()}"
         send_message(
             chat_id,
-            f"<b>Общая оценка: {score}/100 - {html.escape(verdict)}</b>\n"
-            f"Готовность: <b>{html.escape(readiness_label(score))}</b>\n\n"
+            f"<b>Оценка ответа на вопрос: {score}/100 - {html.escape(verdict)}</b>\n"
             f"{render_training_direction(analysis, advice)}\n\n"
-            f"{render_more_questions_cta()}\n\n"
-            f"Напиши /mock, чтобы ответить на следующий вопрос из текущего набора.",
-            keyboard=MAIN_KEYBOARD,
+            f"{next_step}",
+            keyboard=POST_TRIAL_KEYBOARD,
         )
         return
 
