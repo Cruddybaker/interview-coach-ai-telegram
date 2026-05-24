@@ -584,13 +584,10 @@ def render_questions(analysis):
 def render_help():
     return (
         "<b>ИИ-тренер интервью: команды</b>\n\n"
-        "<b>Основной сценарий</b>\n"
         "/start - начать со своего резюме и вакансии\n"
         "/questions - показать вероятные вопросы\n"
         "/mock - начать тренировочный вопрос\n"
-        "/reset - начать заново\n\n"
-        "<b>Служебные команды для проверки ДЗ</b>\n"
-        "/demo, /gate3, /safety, /tests, /status, /export"
+        "/reset - начать заново"
     )
 
 
