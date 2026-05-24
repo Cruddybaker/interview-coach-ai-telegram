@@ -15,7 +15,13 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
-BOT_VERSION = "gate3-dz4-v1.0"
+BOT_VERSION = "gate3-dz4-v1.1"
+TRIAL_QUESTION_LIMIT = 5
+UNLIMITED_TELEGRAM_IDS = {
+    item.strip()
+    for item in os.environ.get("UNLIMITED_TELEGRAM_IDS", "").replace(";", ",").split(",")
+    if item.strip()
+}
 
 MAIN_KEYBOARD = [
     ["/questions", "/mock"],
@@ -90,7 +96,38 @@ SAMPLE_JOB = (
 )
 
 sessions = {}
+trial_usage = {}
 question_bank_cache = None
+
+
+def is_unlimited_user(chat_id):
+    return str(chat_id) in UNLIMITED_TELEGRAM_IDS
+
+
+def trial_state(chat_id):
+    return trial_usage.setdefault(
+        str(chat_id),
+        {"analysis_used": False, "questions_answered": 0, "completed": False},
+    )
+
+
+def has_used_trial(chat_id):
+    return (not is_unlimited_user(chat_id)) and bool(trial_state(chat_id).get("analysis_used"))
+
+
+def mark_trial_analysis_used(chat_id):
+    if not is_unlimited_user(chat_id):
+        trial_state(chat_id)["analysis_used"] = True
+
+
+def mark_trial_answered(chat_id, answered_count):
+    if is_unlimited_user(chat_id):
+        return
+    state = trial_state(chat_id)
+    state["analysis_used"] = True
+    state["questions_answered"] = max(state.get("questions_answered", 0), answered_count)
+    if state["questions_answered"] >= TRIAL_QUESTION_LIMIT:
+        state["completed"] = True
 
 
 def normalize(text):
@@ -316,7 +353,7 @@ def clean_questions(value, fallback):
                     "rationale": rationale[:240] or "Вопрос связан с требованиями вакансии и опытом кандидата.",
                 }
             )
-    return questions[:5] or fallback[:5]
+    return questions[:TRIAL_QUESTION_LIMIT] or fallback[:TRIAL_QUESTION_LIMIT]
 
 
 def heuristic_analyze(resume, job):
@@ -398,7 +435,7 @@ def llm_analyze(resume, job, baseline):
         '  "gaps": ["до 7 коротких слабых мест"],\n'
         '  "questions": [{"title": "вопрос", "rationale": "почему этот вопрос вероятен"}]\n'
         "}\n\n"
-        "Верни ровно 5 примерных вопросов по вакансии. Не больше.\n\n"
+        f"Верни ровно {TRIAL_QUESTION_LIMIT} примерных вопросов по вакансии. Не больше.\n\n"
         f"Baseline heuristic JSON, можно уточнить, но не игнорировать полностью:\n{json.dumps(baseline, ensure_ascii=False)}\n\n"
         f"Релевантные элементы банка вопросов:\n{json.dumps(bank_context, ensure_ascii=False)}\n\n"
         f"Резюме:\n{resume[:6000]}\n\n"
@@ -465,7 +502,7 @@ def build_questions(required_skills, resume_skills, missing_skills, bank_items=N
             "rationale": "Проверка зрелости и работы с неопределенностью.",
         },
     ]
-    return questions[:5]
+    return questions[:TRIAL_QUESTION_LIMIT]
 
 
 def readiness_label(score):
@@ -516,6 +553,31 @@ def render_trial_choice():
     )
 
 
+def render_trial_locked(has_current_analysis=False):
+    if has_current_analysis:
+        return (
+            "У тебя уже активирован пробный набор из 5 вопросов. "
+            "Новые резюме и вакансии в пробном режиме не разбираются.\n\n"
+            "Можно продолжить текущую тренировку через /mock, посмотреть вопросы через /questions "
+            "или получить общую оценку через /summary.\n\n"
+            + render_more_questions_cta()
+        )
+    return (
+        "Пробный лимит уже использован: новые резюме, вакансии, вопросы и оценки в бесплатном режиме "
+        "больше не выдаются.\n\n"
+        + render_more_questions_cta()
+    )
+
+
+def render_whoami(chat_id):
+    status = "да" if is_unlimited_user(chat_id) else "нет"
+    return (
+        "<b>Telegram ID</b>\n\n"
+        f"ID этого чата: <code>{html.escape(str(chat_id))}</code>\n"
+        f"Безлимит включен: <b>{status}</b>"
+    )
+
+
 def render_summary(session):
     analysis = session.get("analysis")
     if not analysis:
@@ -526,7 +588,7 @@ def render_summary(session):
     if not answered_count:
         return "Пока нет ответов для общей оценки. Напиши /mock и ответь хотя бы на один вопрос."
 
-    total_questions = min(5, len(analysis.get("questions", [])))
+    total_questions = min(TRIAL_QUESTION_LIMIT, len(analysis.get("questions", [])))
     avg_answer_score = round(sum(answer_scores[-total_questions:]) / min(answered_count, total_questions))
     overall_score = combined_readiness_score(analysis, avg_answer_score)
     weak_spot = html.escape((analysis.get("gaps") or ["Добавить больше конкретики и метрик в ответы."])[0])
@@ -646,14 +708,14 @@ def render_report(analysis):
         f"Фокус подготовки: <b>{html.escape(analysis['focus'])}</b>\n\n"
         f"<b>Слабые места</b>\n{fmt_list(analysis['gaps'])}\n\n"
         f"Банк вопросов: подобрано <b>{bank_count}</b> релевантных кейсов\n\n"
-        f"Я подготовил <b>5 примерных вопросов</b> по этой вакансии. "
+        f"Я подготовил <b>{TRIAL_QUESTION_LIMIT} примерных вопросов</b> по этой вакансии. "
         f"Напиши /questions, чтобы посмотреть список, или /mock, чтобы начать тренировку."
     )
 
 
 def render_questions(analysis):
-    lines = ["<b>5 примерных вопросов по вакансии</b>"]
-    for index, question in enumerate(analysis["questions"][:5], 1):
+    lines = [f"<b>{TRIAL_QUESTION_LIMIT} примерных вопросов по вакансии</b>"]
+    for index, question in enumerate(analysis["questions"][:TRIAL_QUESTION_LIMIT], 1):
         lines.append(
             f"\n<b>{index}. {html.escape(question['title'])}</b>\n"
             f"{html.escape(question['rationale'])}"
@@ -752,7 +814,7 @@ def render_export(session):
     questions = analysis.get("questions", [])
     top_questions = "\n".join(
         f"{index}. {html.escape(question['title'])}"
-        for index, question in enumerate(questions[:5], 1)
+        for index, question in enumerate(questions[:TRIAL_QUESTION_LIMIT], 1)
     )
     bank_matches = ", ".join(analysis.get("bank_matches", [])) or "нет"
     return (
@@ -776,15 +838,23 @@ def handle_message(chat_id, text):
     command = text.strip().lower()
 
     if command in {"/start", "старт"}:
+        if has_used_trial(chat_id):
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
         session.clear()
         session["state"] = "waiting_resume"
         send_message(
             chat_id,
             "Привет. Я ИИ-тренер интервью.\n\nПришли резюме текстом, а следующим сообщением - вакансию. "
-            "Я оценю готовность, найду слабые места и подберу 5 примерных вопросов, похожих на реальные задачи "
-            "для этой роли.\n\nПосле тренировочного ответа дам общую оценку и направление, что прокачать перед интервью.",
+            f"Я оценю готовность, найду слабые места и подберу {TRIAL_QUESTION_LIMIT} примерных вопросов, "
+            "похожих на реальные задачи для этой роли.\n\nПосле тренировочного ответа дам общую оценку "
+            "и направление, что прокачать перед интервью.",
             keyboard=MAIN_KEYBOARD,
         )
+        return
+
+    if command == "/whoami":
+        send_message(chat_id, render_whoami(chat_id), keyboard=MAIN_KEYBOARD)
         return
 
     if command in {"/help", "help", "помощь"}:
@@ -812,12 +882,18 @@ def handle_message(chat_id, text):
         return
 
     if command == "/reset":
+        if has_used_trial(chat_id):
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
         session.clear()
         session["state"] = "waiting_resume"
         send_message(chat_id, "Ок, начинаем заново. Пришли резюме текстом.", keyboard=MAIN_KEYBOARD)
         return
 
     if command == "/demo":
+        if has_used_trial(chat_id):
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
         analysis = analyze(SAMPLE_RESUME, SAMPLE_JOB)
         session.update(
             {
@@ -828,12 +904,16 @@ def handle_message(chat_id, text):
                 "mock_index": 0,
             }
         )
+        mark_trial_analysis_used(chat_id)
         send_message(chat_id, render_report(analysis), keyboard=MAIN_KEYBOARD)
         return
 
     if command == "/questions":
         analysis = session.get("analysis")
         if not analysis:
+            if has_used_trial(chat_id):
+                send_message(chat_id, render_trial_locked(False), keyboard=POST_TRIAL_KEYBOARD)
+                return
             send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
             return
         send_message(chat_id, render_questions(analysis), keyboard=MAIN_KEYBOARD)
@@ -842,16 +922,19 @@ def handle_message(chat_id, text):
     if command == "/mock":
         analysis = session.get("analysis")
         if not analysis:
+            if has_used_trial(chat_id):
+                send_message(chat_id, render_trial_locked(False), keyboard=POST_TRIAL_KEYBOARD)
+                return
             send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
             return
-        questions = analysis.get("questions", [])[:5]
+        questions = analysis.get("questions", [])[:TRIAL_QUESTION_LIMIT]
         if not questions:
             send_message(chat_id, "Пока нет вопросов для тренировки. Пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
             return
         if session.get("mock_index", 0) >= len(questions):
             send_message(
                 chat_id,
-                "Ты уже прошел все 5 пробных вопросов по этой вакансии.\n\n"
+                f"Ты уже прошел все {TRIAL_QUESTION_LIMIT} пробных вопросов по этой вакансии.\n\n"
                 + render_more_questions_cta()
                 + "\n\nНапиши /summary, чтобы получить общую оценку готовности.",
                 keyboard=POST_TRIAL_KEYBOARD,
@@ -862,7 +945,7 @@ def handle_message(chat_id, text):
         question = questions[session["mock_index"]]["title"]
         send_message(
             chat_id,
-            f"<b>Тренировочный вопрос {session['mock_index'] + 1}/5</b>\n"
+            f"<b>Тренировочный вопрос {session['mock_index'] + 1}/{TRIAL_QUESTION_LIMIT}</b>\n"
             f"{html.escape(question)}\n\nНапиши ответ одним сообщением.",
         )
         return
@@ -872,24 +955,33 @@ def handle_message(chat_id, text):
         return
 
     if session.get("state") == "waiting_resume":
+        if has_used_trial(chat_id):
+            session["state"] = "idle"
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
         session["resume"] = text.strip()
         session["state"] = "waiting_job"
         send_message(chat_id, "Принял резюме. Теперь пришли описание вакансии.")
         return
 
     if session.get("state") == "waiting_job":
+        if has_used_trial(chat_id):
+            session["state"] = "idle"
+            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            return
         session["job"] = text.strip()
         send_message(chat_id, "Собираю диагностику. Обычно это занимает несколько секунд.")
         analysis = analyze(session["resume"], session["job"])
         session["analysis"] = analysis
         session["mock_index"] = 0
         session["state"] = "idle"
+        mark_trial_analysis_used(chat_id)
         send_message(chat_id, render_report(analysis), keyboard=MAIN_KEYBOARD)
         return
 
     if session.get("state") == "waiting_answer":
         analysis = session.get("analysis")
-        questions = (analysis.get("questions") or [{}])[:5]
+        questions = (analysis.get("questions") or [{}])[:TRIAL_QUESTION_LIMIT]
         mock_index = min(session.get("mock_index", 0), len(questions) - 1)
         question = questions[mock_index].get("title", "")
         send_message(chat_id, "Оцениваю ответ по рубрике.")
@@ -904,10 +996,12 @@ def handle_message(chat_id, text):
         session["mock_index"] = answered_count
         session.setdefault("answer_scores", []).append(score)
         session["state"] = "idle"
+        mark_trial_answered(chat_id, answered_count)
         if answered_count >= len(questions):
             next_step = (
-                "Ты прошел все 5 пробных вопросов по этой вакансии.\n\n"
-                "Можешь получить общую оценку или попробовать продолжить тренировку."
+                f"Ты прошел все {TRIAL_QUESTION_LIMIT} пробных вопросов по этой вакансии.\n\n"
+                "Можешь получить общую оценку через /summary.\n\n"
+                + render_more_questions_cta()
             )
         else:
             remaining = len(questions) - answered_count

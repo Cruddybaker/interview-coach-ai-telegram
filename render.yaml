@@ -13,5 +13,7 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-5.1
+      - key: UNLIMITED_TELEGRAM_IDS
+        sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false

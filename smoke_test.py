@@ -15,6 +15,8 @@ def main():
 
     bot.OPENAI_API_KEY = None
     bot.sessions.clear()
+    bot.trial_usage.clear()
+    bot.UNLIMITED_TELEGRAM_IDS.clear()
     bot.send_message = capture_send_message
 
     chat_id = 1001
@@ -72,6 +74,25 @@ def main():
     cta_text = "\n".join(message["text"] for message in messages if message["chat_id"] == cta_chat_id)
     assert "Пакет дополнительных тренировок" in cta_text
 
+    locked_chat_id = 1005
+    bot.handle_message(locked_chat_id, "/demo")
+    bot.handle_message(locked_chat_id, "/reset")
+    bot.handle_message(locked_chat_id, "/demo")
+    locked_text = "\n".join(message["text"] for message in messages if message["chat_id"] == locked_chat_id)
+    assert "Новые резюме и вакансии в пробном режиме не разбираются" in locked_text
+    assert bot.sessions[locked_chat_id]["analysis"]
+
+    unlimited_chat_id = 7777
+    bot.UNLIMITED_TELEGRAM_IDS.add(str(unlimited_chat_id))
+    bot.handle_message(unlimited_chat_id, "/whoami")
+    bot.handle_message(unlimited_chat_id, "/demo")
+    bot.handle_message(unlimited_chat_id, "/reset")
+    bot.handle_message(unlimited_chat_id, "Product analyst, SQL, Python, A/B tests.")
+    bot.handle_message(unlimited_chat_id, "AI Product Manager, LLM, RAG, SQL, roadmap, metrics.")
+    unlimited_text = "\n".join(message["text"] for message in messages if message["chat_id"] == unlimited_chat_id)
+    assert "Безлимит включен: <b>да</b>" in unlimited_text
+    assert "Диагностика готовности" in unlimited_text
+
     boundary_chat_id = 1002
     bot.handle_message(boundary_chat_id, "/start")
     bot.handle_message(boundary_chat_id, "Учился на курсах, немного знаю Excel.")
@@ -98,6 +119,8 @@ def main():
     print(f"Question bank matches: {', '.join(analysis['bank_matches'])}")
     print(f"Boundary scenario risk: {boundary_analysis['risk']}")
     print("Negative safety scenario: passed")
+    print("Trial lock scenario: passed")
+    print("Unlimited admin scenario: passed")
     print("\nTranscript preview:")
     for message in messages[:8]:
         print("- " + strip_tags(message["text"]).replace("\n", " ")[:220])
