@@ -60,6 +60,12 @@ def main():
     assert len(analysis["questions"]) == 5
     assert analysis["source"] == "heuristic"
     assert analysis["bank_matches"]
+    assert len(bot.load_question_bank()) >= 72
+    consulting_matches = bot.retrieve_question_bank(
+        "",
+        "Middle strategy consultant, case interview, profitability, market sizing, pricing, market entry",
+    )
+    assert any("consulting" in item.get("tags", []) for item in consulting_matches)
 
     cta_chat_id = 1004
     bot.handle_message(cta_chat_id, "/demo")
@@ -208,6 +214,7 @@ def main():
     print("Resume duplicate/update scenario: passed")
     print("Position and grade scenario: passed")
     print("Position limit scenario: passed")
+    print("Consulting case bank scenario: passed")
     print("\nTranscript preview:")
     for message in messages[:8]:
         print("- " + strip_tags(message["text"]).replace("\n", " ")[:220])

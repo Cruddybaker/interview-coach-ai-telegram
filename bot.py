@@ -15,7 +15,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
-BOT_VERSION = "gate3-dz4-v1.4"
+BOT_VERSION = "gate3-dz4-v1.5"
 TRIAL_QUESTION_LIMIT = 5
 TRIAL_VACANCY_LIMIT = 3
 TRIAL_POSITION_LIMIT = 1
@@ -68,6 +68,7 @@ SKILL_ALIASES = {
     "business_analysis": ["системный аналитик", "bpmn", "uml", "требован", "интеграц", "er-модель"],
     "banking": ["банк", "сбер", "тинькофф", "т-банк", "кредит", "бирж", "инвестиц"],
     "marketplace": ["ozon", "озон", "авито", "маркетплейс"],
+    "consulting": ["consulting", "consultant", "case interview", "консалтинг", "консультант", "бизнес кейс", "бизнес-кейс", "стратегический кейс"],
 }
 
 SKILL_LABELS = {
@@ -88,6 +89,7 @@ SKILL_LABELS = {
     "business_analysis": "системный анализ",
     "banking": "банковский домен",
     "marketplace": "маркетплейс",
+    "consulting": "case interview / consulting",
 }
 
 SAMPLE_RESUME = (
@@ -379,6 +381,15 @@ def infer_tags(resume, job):
         "business_analysis": ["системный аналитик", "bpmn", "требован", "интеграц", "er"],
         "banking": ["банк", "сбер", "тинькофф", "т-банк", "кредит", "инвестиц"],
         "marketplace": ["ozon", "озон", "авито", "маркетплейс"],
+        "consulting": ["consulting", "consultant", "консалтинг", "консультант", "case interview", "бизнес кейс", "бизнес-кейс"],
+        "business_case": ["case interview", "business case", "бизнес кейс", "бизнес-кейс", "кейс интервью", "кейс-интервью"],
+        "market_sizing": ["market sizing", "оценить рынок", "размер рынка", "емкость рынка", "tam", "sam", "som"],
+        "profitability": ["profitability", "прибыль", "маржин", "выручк", "затрат", "себестоим"],
+        "pricing": ["pricing", "ценообраз", "цена", "тариф", "прайс"],
+        "market_entry": ["market entry", "выход на рынок", "новый рынок", "запуск в регионе"],
+        "m_and_a": ["m&a", "merger", "acquisition", "слияние", "поглощение", "купить компанию"],
+        "growth_strategy": ["growth", "рост", "gmv", "вырастить", "масштабировать"],
+        "operations": ["operations", "операцион", "очеред", "мощност", "capacity", "логист"],
         "go": ["go", "golang", "горутины", "goroutine", "каналы", "runtime"],
         "php": ["php"],
         "java": ["java", "jvm", "optional", "hibernate"],

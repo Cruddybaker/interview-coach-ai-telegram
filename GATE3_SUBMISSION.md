@@ -68,6 +68,7 @@ export OPENAI_API_KEY=""
 - С `OPENAI_API_KEY`: OpenAI Responses API генерирует диагностику и оценивает ответ.
 - Без `OPENAI_API_KEY`: локальная эвристика + `question_bank.json`, чтобы прототип оставался проверяемым без внешних ключей.
 - `question_bank.json` работает как локальный банк кейсов для подбора релевантных вопросов.
+- В банк добавлены оригинальные русские consulting/case interview кейсы по темам profitability, market sizing, pricing, market entry, growth, M&A и operations.
 
 ## Решение Gate 3
 
