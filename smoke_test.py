@@ -73,13 +73,19 @@ def main():
     bot.handle_message(cta_chat_id, "/mock")
     cta_text = "\n".join(message["text"] for message in messages if message["chat_id"] == cta_chat_id)
     assert "Пакет дополнительных тренировок" in cta_text
+    assert "осталось разборов новых вакансий: <b>2/3</b>" in cta_text
 
     locked_chat_id = 1005
     bot.handle_message(locked_chat_id, "/demo")
     bot.handle_message(locked_chat_id, "/reset")
     bot.handle_message(locked_chat_id, "/demo")
+    bot.handle_message(locked_chat_id, "/reset")
+    bot.handle_message(locked_chat_id, "/demo")
+    bot.handle_message(locked_chat_id, "/reset")
+    bot.handle_message(locked_chat_id, "/demo")
     locked_text = "\n".join(message["text"] for message in messages if message["chat_id"] == locked_chat_id)
-    assert "Новые резюме, вакансии и позиции в пробном режиме не разбираются" in locked_text
+    assert "Бесплатный лимит разборов вакансий уже использован" in locked_text
+    assert bot.trial_usage[str(locked_chat_id)]["vacancy_analyses_used"] == 3
     assert bot.sessions[locked_chat_id]["analysis"]
 
     unlimited_chat_id = 7777
@@ -109,6 +115,7 @@ def main():
     )
     bot.handle_message(resume_library_chat_id, "/add_resume")
     bot.handle_message(resume_library_chat_id, "ml product manager")
+    duplicate_keyboard = messages[-1]["keyboard"]
     bot.handle_message(resume_library_chat_id, "да")
     bot.handle_message(
         resume_library_chat_id,
@@ -131,6 +138,7 @@ def main():
     )
     assert "Мои резюме" in resume_library_text
     assert "уже есть" in resume_library_text
+    assert duplicate_keyboard == bot.YES_NO_KEYBOARD
     assert "Обновил резюме <b>ML Product Manager</b>" in resume_library_text
     assert "Обновил резюме <b>Backend Go</b>" in resume_library_text
     assert "Активное резюме: <b>ML Product Manager</b>" in resume_library_text
@@ -150,6 +158,23 @@ def main():
     assert len(position_analysis["questions"]) == 5
     assert "Вопросы по позиции" in position_text
     assert "Грейд: <b>senior/lead</b>" in position_text
+
+    position_limit_chat_id = 2003
+    bot.handle_message(position_limit_chat_id, "/position")
+    bot.handle_message(position_limit_chat_id, "Middle data analyst, SQL, dashboards, A/B tests")
+    for index in range(5):
+        bot.handle_message(position_limit_chat_id, "/mock")
+        bot.handle_message(
+            position_limit_chat_id,
+            f"Ответ {index + 1}: я описал ситуацию, задачу, действия и результат, добавил метрику 5%.",
+        )
+    bot.handle_message(position_limit_chat_id, "/mock")
+    bot.handle_message(position_limit_chat_id, "/position")
+    position_limit_text = "\n".join(
+        message["text"] for message in messages if message["chat_id"] == position_limit_chat_id
+    )
+    assert "Бесплатные 5 вопросов по этой позиции закончились" in position_limit_text
+    assert "Бесплатный набор вопросов по позиции уже активирован" in position_limit_text
 
     boundary_chat_id = 1002
     bot.handle_message(boundary_chat_id, "/start")
@@ -182,6 +207,7 @@ def main():
     print("Resume library scenario: passed")
     print("Resume duplicate/update scenario: passed")
     print("Position and grade scenario: passed")
+    print("Position limit scenario: passed")
     print("\nTranscript preview:")
     for message in messages[:8]:
         print("- " + strip_tags(message["text"]).replace("\n", " ")[:220])

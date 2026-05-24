@@ -15,8 +15,10 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
-BOT_VERSION = "gate3-dz4-v1.3"
+BOT_VERSION = "gate3-dz4-v1.4"
 TRIAL_QUESTION_LIMIT = 5
+TRIAL_VACANCY_LIMIT = 3
+TRIAL_POSITION_LIMIT = 1
 RESUME_PREVIEW_LIMIT = 120
 UNLIMITED_TELEGRAM_IDS = {
     item.strip()
@@ -34,6 +36,10 @@ POST_TRIAL_KEYBOARD = [
     ["/mock", "/summary"],
     ["/resumes", "/position"],
     ["/reset", "/help"],
+]
+
+YES_NO_KEYBOARD = [
+    ["да", "нет"],
 ]
 
 STOP_WORDS = {
@@ -110,17 +116,57 @@ def is_unlimited_user(chat_id):
 def trial_state(chat_id):
     return trial_usage.setdefault(
         str(chat_id),
-        {"analysis_used": False, "questions_answered": 0, "completed": False},
+        {
+            "vacancy_analyses_used": 0,
+            "position_analyses_used": 0,
+            "questions_answered": 0,
+            "completed": False,
+        },
     )
 
 
+def vacancy_analyses_used(chat_id):
+    state = trial_state(chat_id)
+    if "vacancy_analyses_used" in state:
+        return int(state.get("vacancy_analyses_used") or 0)
+    return 1 if state.get("analysis_used") else 0
+
+
+def position_analyses_used(chat_id):
+    return int(trial_state(chat_id).get("position_analyses_used") or 0)
+
+
+def remaining_vacancy_analyses(chat_id):
+    if is_unlimited_user(chat_id):
+        return TRIAL_VACANCY_LIMIT
+    return max(0, TRIAL_VACANCY_LIMIT - vacancy_analyses_used(chat_id))
+
+
 def has_used_trial(chat_id):
-    return (not is_unlimited_user(chat_id)) and bool(trial_state(chat_id).get("analysis_used"))
+    return (not is_unlimited_user(chat_id)) and vacancy_analyses_used(chat_id) >= TRIAL_VACANCY_LIMIT
+
+
+def has_used_position_trial(chat_id):
+    return (not is_unlimited_user(chat_id)) and position_analyses_used(chat_id) >= TRIAL_POSITION_LIMIT
 
 
 def mark_trial_analysis_used(chat_id):
     if not is_unlimited_user(chat_id):
-        trial_state(chat_id)["analysis_used"] = True
+        state = trial_state(chat_id)
+        state["vacancy_analyses_used"] = min(
+            TRIAL_VACANCY_LIMIT,
+            vacancy_analyses_used(chat_id) + 1,
+        )
+        state["analysis_used"] = True
+
+
+def mark_position_analysis_used(chat_id):
+    if not is_unlimited_user(chat_id):
+        state = trial_state(chat_id)
+        state["position_analyses_used"] = min(
+            TRIAL_POSITION_LIMIT,
+            position_analyses_used(chat_id) + 1,
+        )
 
 
 def mark_trial_answered(chat_id, answered_count):
@@ -807,12 +853,26 @@ def render_training_direction(analysis, advice):
     )
 
 
-def render_more_questions_cta():
-    return (
+def analysis_context_text(analysis):
+    return "по этой позиции" if analysis and analysis.get("mode") == "position" else "по этой вакансии"
+
+
+def render_more_questions_cta(analysis=None, chat_id=None):
+    context = analysis_context_text(analysis)
+    text = (
         "<b>Нужны еще вопросы?</b>\n"
+        f"Бесплатные {TRIAL_QUESTION_LIMIT} вопросов {context} закончились. "
         "Пакет дополнительных тренировок под конкретную компанию и роль уже в разработке. "
         "Оплату пока не подключили: сейчас это заглушка, а позже здесь появится переход к покупке."
     )
+    if analysis and analysis.get("mode") != "position" and chat_id is not None and not is_unlimited_user(chat_id):
+        remaining = remaining_vacancy_analyses(chat_id)
+        if remaining:
+            text += (
+                f"\n\nВ бесплатном режиме еще осталось разборов новых вакансий: "
+                f"<b>{remaining}/{TRIAL_VACANCY_LIMIT}</b>. Для новой вакансии напиши /reset или /start."
+            )
+    return text
 
 
 def render_trial_choice():
@@ -826,16 +886,32 @@ def render_trial_choice():
 def render_trial_locked(has_current_analysis=False):
     if has_current_analysis:
         return (
-            "У тебя уже активирован пробный набор из 5 вопросов. "
-            "Новые резюме, вакансии и позиции в пробном режиме не разбираются.\n\n"
+            f"Бесплатный лимит разборов вакансий уже использован: <b>{TRIAL_VACANCY_LIMIT}/{TRIAL_VACANCY_LIMIT}</b>. "
+            "Новые вакансии в пробном режиме больше не разбираются.\n\n"
             "Можно продолжить текущую тренировку через /mock, посмотреть вопросы через /questions "
             "или получить общую оценку через /summary.\n\n"
             + render_more_questions_cta()
         )
     return (
-        "Пробный лимит уже использован: новые резюме, вакансии, позиции, вопросы и оценки в бесплатном режиме "
-        "больше не выдаются.\n\n"
+        f"Бесплатный лимит разборов вакансий уже использован: <b>{TRIAL_VACANCY_LIMIT}/{TRIAL_VACANCY_LIMIT}</b>. "
+        "Новые вакансии, вопросы и оценки по вакансиям в бесплатном режиме больше не выдаются.\n\n"
         + render_more_questions_cta()
+    )
+
+
+def render_position_trial_locked(has_current_analysis=False):
+    if has_current_analysis:
+        return (
+            f"Бесплатный набор вопросов по позиции уже активирован: "
+            f"<b>{TRIAL_QUESTION_LIMIT}/{TRIAL_QUESTION_LIMIT}</b> вопросов.\n\n"
+            "Можно продолжить текущую тренировку через /mock, посмотреть вопросы через /questions "
+            "или получить общую оценку через /summary.\n\n"
+            + render_more_questions_cta({"mode": "position"})
+        )
+    return (
+        f"Бесплатный набор вопросов по позиции уже использован: "
+        f"<b>{TRIAL_QUESTION_LIMIT}/{TRIAL_QUESTION_LIMIT}</b> вопросов.\n\n"
+        + render_more_questions_cta({"mode": "position"})
     )
 
 
@@ -1315,8 +1391,9 @@ def handle_message(chat_id, text):
         return
 
     if command == "/position":
-        if has_used_trial(chat_id):
-            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+        if has_used_position_trial(chat_id):
+            current_position = bool(session.get("analysis", {}).get("mode") == "position")
+            send_message(chat_id, render_position_trial_locked(current_position), keyboard=POST_TRIAL_KEYBOARD)
             return
         clear_current_flow(session)
         session["state"] = "waiting_position"
@@ -1413,8 +1490,8 @@ def handle_message(chat_id, text):
         if session.get("mock_index", 0) >= len(questions):
             send_message(
                 chat_id,
-                f"Ты уже прошел все {TRIAL_QUESTION_LIMIT} пробных вопросов по этой вакансии.\n\n"
-                + render_more_questions_cta()
+                f"Ты уже прошел все {TRIAL_QUESTION_LIMIT} пробных вопросов {analysis_context_text(analysis)}.\n\n"
+                + render_more_questions_cta(analysis, chat_id)
                 + "\n\nНапиши /summary, чтобы получить общую оценку готовности.",
                 keyboard=POST_TRIAL_KEYBOARD,
             )
@@ -1444,7 +1521,7 @@ def handle_message(chat_id, text):
                 chat_id,
                 f"Резюме с названием <b>{html.escape(duplicate_resume['name'])}</b> уже есть.\n\n"
                 "Хочешь обновить его текст? Напиши <b>да</b> или <b>нет</b>.",
-                keyboard=MAIN_KEYBOARD,
+                keyboard=YES_NO_KEYBOARD,
             )
             return
         session["pending_resume_name"] = resume_name
@@ -1513,9 +1590,10 @@ def handle_message(chat_id, text):
         return
 
     if session.get("state") == "waiting_position":
-        if has_used_trial(chat_id):
+        if has_used_position_trial(chat_id):
             session["state"] = "idle"
-            send_message(chat_id, render_trial_locked(bool(session.get("analysis"))), keyboard=POST_TRIAL_KEYBOARD)
+            current_position = bool(session.get("analysis", {}).get("mode") == "position")
+            send_message(chat_id, render_position_trial_locked(current_position), keyboard=POST_TRIAL_KEYBOARD)
             return
         position_text = raw_text
         send_message(chat_id, "Собираю вопросы по позиции и грейду. Обычно это занимает несколько секунд.")
@@ -1526,7 +1604,7 @@ def handle_message(chat_id, text):
         session["mock_index"] = 0
         session["answer_scores"] = []
         session["state"] = "idle"
-        mark_trial_analysis_used(chat_id)
+        mark_position_analysis_used(chat_id)
         send_message(chat_id, render_report(analysis), keyboard=MAIN_KEYBOARD)
         return
 
@@ -1582,9 +1660,9 @@ def handle_message(chat_id, text):
         mark_trial_answered(chat_id, answered_count)
         if answered_count >= len(questions):
             next_step = (
-                f"Ты прошел все {TRIAL_QUESTION_LIMIT} пробных вопросов по этой вакансии.\n\n"
+                f"Ты прошел все {TRIAL_QUESTION_LIMIT} пробных вопросов {analysis_context_text(analysis)}.\n\n"
                 "Можешь получить общую оценку через /summary.\n\n"
-                + render_more_questions_cta()
+                + render_more_questions_cta(analysis, chat_id)
             )
         else:
             remaining = len(questions) - answered_count
