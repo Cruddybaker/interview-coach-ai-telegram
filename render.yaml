@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: interview-coach-ai-telegram
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /health
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false

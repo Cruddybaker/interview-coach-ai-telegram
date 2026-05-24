@@ -1,0 +1,98 @@
+[
+  {
+    "id": "sql_funnel_001",
+    "tags": ["sql", "analytics", "product"],
+    "difficulty": "junior-middle",
+    "type": "practical_task",
+    "prompt": "Дана таблица events(user_id, event_name, event_time, source). Посчитайте конверсию по этапам signup -> application_started -> application_submitted за последние 30 дней и найдите самый слабый этап.",
+    "signals": ["SQL", "воронка", "агрегации", "продуктовые метрики"]
+  },
+  {
+    "id": "ab_test_001",
+    "tags": ["analytics", "product", "statistics"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "Команда изменила onboarding и видит рост конверсии на 4%. Как проверить, что эффект настоящий, и какие метрики нужно посмотреть кроме основной конверсии?",
+    "signals": ["A/B test", "guardrail metrics", "статистическая значимость", "продуктовое мышление"]
+  },
+  {
+    "id": "metric_decomposition_001",
+    "tags": ["analytics", "product"],
+    "difficulty": "junior-middle",
+    "type": "case",
+    "prompt": "У сервиса упало число успешных заявок на 12% неделя к неделе. Разложите проблему на метрики и опишите план диагностики.",
+    "signals": ["декомпозиция", "воронка", "гипотезы", "приоритизация"]
+  },
+  {
+    "id": "ml_eval_001",
+    "tags": ["ml", "product", "analytics"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "Вы запускаете AI-фичу, которая оценивает ответы кандидата на интервью. Какие offline и online метрики качества вы выберете и почему?",
+    "signals": ["LLM eval", "human eval", "precision", "user value", "safety"]
+  },
+  {
+    "id": "rag_quality_001",
+    "tags": ["ml", "product", "rag"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "Пользователь загрузил резюме и вакансию, а AI выдал нерелевантные вопросы. Где может ломаться RAG/LLM pipeline и как вы будете это проверять?",
+    "signals": ["RAG", "retrieval", "prompting", "eval set", "debugging"]
+  },
+  {
+    "id": "prompt_safety_001",
+    "tags": ["ml", "product", "safety"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "Кандидат просит AI придумать несуществующий опыт для резюме. Как продукт должен ответить и какую safety-метрику вы бы добавили?",
+    "signals": ["AI safety", "guardrails", "policy", "честность"]
+  },
+  {
+    "id": "unit_economics_001",
+    "tags": ["finance", "product"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "AI-сервис подготовки к интервью стоит 990 рублей в месяц. Стоимость LLM-инференса - 25 рублей на активную сессию. Какие метрики нужны, чтобы понять, сходится ли экономика?",
+    "signals": ["unit economics", "CAC", "LTV", "gross margin", "retention"]
+  },
+  {
+    "id": "stakeholder_001",
+    "tags": ["communication", "product"],
+    "difficulty": "junior-middle",
+    "type": "behavioral",
+    "prompt": "Расскажите о ситуации, когда стейкхолдер просил сделать фичу, но данные показывали, что проблема в другом. Как вы действовали?",
+    "signals": ["stakeholder management", "данные", "конфликт", "коммуникация"]
+  },
+  {
+    "id": "roadmap_001",
+    "tags": ["product", "analytics"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "У вас есть три гипотезы: улучшить резюме, добавить mock-интервью, сделать live-copilot. Как вы приоритизируете roadmap на 4 недели?",
+    "signals": ["roadmap", "RICE", "risk", "user research"]
+  },
+  {
+    "id": "python_analysis_001",
+    "tags": ["python", "analytics"],
+    "difficulty": "junior-middle",
+    "type": "practical_task",
+    "prompt": "Есть CSV с откликами на вакансии: user_id, vacancy_id, status, created_at. Как на Python найти конверсию из отклика в интервью по неделям?",
+    "signals": ["Python", "pandas", "groupby", "time series"]
+  },
+  {
+    "id": "english_interview_001",
+    "tags": ["english", "communication"],
+    "difficulty": "junior-middle",
+    "type": "behavioral",
+    "prompt": "Answer in English: tell me about a project where you used data to influence a product decision.",
+    "signals": ["English", "communication", "STAR", "data storytelling"]
+  },
+  {
+    "id": "product_sense_001",
+    "tags": ["product", "analytics"],
+    "difficulty": "middle",
+    "type": "case",
+    "prompt": "Представьте, что пользователи получают AI-отчет подготовки, но не переходят к mock-интервью. Какие гипотезы и эксперименты вы предложите?",
+    "signals": ["activation", "conversion", "user journey", "experimentation"]
+  }
+]
