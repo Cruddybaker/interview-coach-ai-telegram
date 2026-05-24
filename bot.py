@@ -18,10 +18,8 @@ QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
 BOT_VERSION = "gate3-dz4-v1.0"
 
 MAIN_KEYBOARD = [
-    ["/demo", "/gate3"],
     ["/questions", "/mock"],
-    ["/status", "/safety"],
-    ["/export", "/reset"],
+    ["/reset", "/help"],
 ]
 
 STOP_WORDS = {
@@ -529,16 +527,13 @@ def render_questions(analysis):
 def render_help():
     return (
         "<b>ИИ-тренер интервью: команды</b>\n\n"
+        "<b>Основной сценарий</b>\n"
         "/start - начать со своего резюме и вакансии\n"
-        "/demo - загрузить демо-сценарий для быстрой проверки\n"
         "/questions - показать вероятные вопросы\n"
         "/mock - начать тренировочный вопрос\n"
-        "/safety - показать ограничения безопасности\n"
-        "/tests - показать сценарии, которые проверялись для ДЗ 4\n"
-        "/status - показать состояние сессии и режим AI-слоя\n"
-        "/export - вывести краткий отчет по текущей сессии\n"
-        "/gate3 - инструкция для проверки прототипа преподавателем\n"
-        "/reset - начать заново"
+        "/reset - начать заново\n\n"
+        "<b>Служебные команды для проверки ДЗ</b>\n"
+        "/demo, /gate3, /safety, /tests, /status, /export"
     )
 
 
@@ -611,14 +606,14 @@ def render_status(session):
         f"Резюме получено: <b>{has_resume}</b>\n"
         f"Вакансия получена: <b>{has_job}</b>\n"
         f"Текущий результат: {summary}\n\n"
-        "Для проверки нажми /gate3 или /demo."
+        "Это служебная команда для диагностики прототипа."
     )
 
 
 def render_export(session):
     analysis = session.get("analysis")
     if not analysis:
-        return "Пока нечего экспортировать. Нажми /demo или пришли резюме и вакансию через /start."
+        return "Пока нечего экспортировать. Пришли резюме и вакансию через /start."
     questions = analysis.get("questions", [])
     top_questions = "\n".join(
         f"{index}. {html.escape(question['title'])}"
@@ -653,8 +648,7 @@ def handle_message(chat_id, text):
             "Привет. Я ИИ-тренер интервью.\n\nПришли резюме текстом, а следующим сообщением - вакансию. "
             "Я соберу оценку готовности, слабые места и вопросы для тренировочного интервью.\n\n"
             "Если на сервере задан OPENAI_API_KEY, резюме, вакансия и mock-ответы будут отправлены в OpenAI API "
-            "для генерации вопросов и фидбека. Без ключа включится локальный fallback.\n\n"
-            "Для быстрой проверки ДЗ 4 нажми /gate3 или /demo.",
+            "для генерации вопросов и фидбека. Без ключа включится локальный fallback.",
             keyboard=MAIN_KEYBOARD,
         )
         return
@@ -702,7 +696,7 @@ def handle_message(chat_id, text):
     if command == "/questions":
         analysis = session.get("analysis")
         if not analysis:
-            send_message(chat_id, "Сначала пришли резюме и вакансию или нажми /demo.", keyboard=MAIN_KEYBOARD)
+            send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
             return
         send_message(chat_id, render_questions(analysis), keyboard=MAIN_KEYBOARD)
         return
@@ -710,7 +704,7 @@ def handle_message(chat_id, text):
     if command == "/mock":
         analysis = session.get("analysis")
         if not analysis:
-            send_message(chat_id, "Сначала пришли резюме и вакансию или нажми /demo.", keyboard=MAIN_KEYBOARD)
+            send_message(chat_id, "Сначала пришли резюме и вакансию через /start.", keyboard=MAIN_KEYBOARD)
             return
         session["state"] = "waiting_answer"
         session["mock_index"] = session.get("mock_index", 0) % len(analysis["questions"])
@@ -762,7 +756,7 @@ def handle_message(chat_id, text):
         )
         return
 
-    send_message(chat_id, "Напиши /start, чтобы начать, /demo для примера или /gate3 для проверки ДЗ 4.", keyboard=MAIN_KEYBOARD)
+    send_message(chat_id, "Напиши /start, чтобы начать, или /help, чтобы посмотреть команды.", keyboard=MAIN_KEYBOARD)
 
 
 def poll():
