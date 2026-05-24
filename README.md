@@ -45,7 +45,7 @@ Smoke-test проверяет:
 cd "/Users/mac/Documents/ml продукты/telegram-bot-prototype"
 export TELEGRAM_BOT_TOKEN="ВАШ_ТОКЕН_ОТ_BOTFATHER"
 export OPENAI_API_KEY="ВАШ_OPENAI_API_KEY"
-export OPENAI_MODEL="gpt-5.4-mini"
+export OPENAI_MODEL="gpt-5.1"
 /Users/mac/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 bot.py
 ```
 
@@ -82,7 +82,7 @@ export OPENAI_MODEL="gpt-5.4-mini"
 ```bash
 TELEGRAM_BOT_TOKEN=ВАШ_ТОКЕН_ОТ_BOTFATHER
 OPENAI_API_KEY=ВАШ_OPENAI_API_KEY
-OPENAI_MODEL=gpt-5.4-mini
+OPENAI_MODEL=gpt-5.1
 TELEGRAM_WEBHOOK_SECRET=любая_длинная_строка_для_защиты_webhook
 ```
 

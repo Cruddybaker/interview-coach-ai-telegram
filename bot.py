@@ -11,7 +11,7 @@ import urllib.request
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 API_URL = f"https://api.telegram.org/bot{TOKEN}" if TOKEN else None
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.4-mini")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
 OPENAI_API_URL = "https://api.openai.com/v1/responses"
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "35"))
 QUESTION_BANK_PATH = Path(__file__).with_name("question_bank.json")
